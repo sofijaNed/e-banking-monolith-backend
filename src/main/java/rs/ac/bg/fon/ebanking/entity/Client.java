@@ -20,6 +20,7 @@ public class Client implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     @Column(name="id")
     private Integer id;
 
@@ -45,35 +46,22 @@ public class Client implements Serializable {
     @Column(name = "address")
     private String address;
 
-    @JoinColumn(name="username",referencedColumnName = "username")
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "username", referencedColumnName = "username")
     @JsonIgnore
     private User userClient;
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Client client = (Client) o;
-        return Objects.equals(getId(), client.getId()) && Objects.equals(getFirstname(), client.getFirstname()) && Objects.equals(getLastname(), client.getLastname()) && Objects.equals(getBirthdate(), client.getBirthdate()) && Objects.equals(getEmail(), client.getEmail()) && Objects.equals(getPhone(), client.getPhone()) && Objects.equals(getAddress(), client.getAddress()) && Objects.equals(getUserClient(), client.getUserClient());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(getId(), getFirstname(), getLastname(), getBirthdate(), getEmail(), getPhone(), getAddress(), getUserClient());
-    }
-
-    @OneToMany(mappedBy = "client")
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    @Cascade(org.hibernate.annotations.CascadeType.SAVE_UPDATE)
-    private Collection<Account> accounts;
-
-    @OneToMany(mappedBy = "client")
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    @Cascade(org.hibernate.annotations.CascadeType.SAVE_UPDATE)
-    private Collection<Loan> loans;
+//    @OneToMany(mappedBy = "client")
+//    @ToString.Exclude
+//    @EqualsAndHashCode.Exclude
+//    @Cascade(org.hibernate.annotations.CascadeType.SAVE_UPDATE)
+//    private Collection<Account> accounts;
+//
+//    @OneToMany(mappedBy = "client")
+//    @ToString.Exclude
+//    @EqualsAndHashCode.Exclude
+//    @Cascade(org.hibernate.annotations.CascadeType.SAVE_UPDATE)
+//    private Collection<Loan> loans;
 
 
 }

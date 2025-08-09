@@ -36,38 +36,47 @@ public class ClientImpl implements ServiceInterface<ClientDTO> {
         this.clientRepository = clientRepository;
         this.modelMapper = modelMapper;
         this.accountRepository = accountRepository;
+        this.modelMapper.typeMap(ClientDTO.class, Client.class)
+                .addMappings(mapper -> mapper.skip(Client::setUserClient));
+
+        this.modelMapper.typeMap(Client.class, ClientDTO.class)
+                .addMappings(mapper -> mapper.skip(ClientDTO::setUserClient));
     }
     @Override
     public List<ClientDTO> findAll() {
-        return clientRepository.findAll().stream().map(client->modelMapper.map(client, ClientDTO.class))
-                .collect(Collectors.toList());
+        return clientRepository.findAll().stream()
+                .map(client -> {
+                    ClientDTO dto = modelMapper.map(client, ClientDTO.class);
+                    if (client.getUserClient() != null) {
+                        dto.setUserClient(client.getUserClient().getUsername());
+                    }
+
+                    return dto;
+                })
+                .toList();
     }
 
     @Override
     public ClientDTO findById(Object id) throws Exception {
         Optional<Client> client = clientRepository.findById((Integer) id);
-        ClientDTO clientDTO;
-        List<AccountDTO> accounts = new ArrayList<>();
-        if(client.isPresent()){
-            clientDTO = modelMapper.map(client.get(),ClientDTO.class);
-            accounts = this.getAccounts(client.get().getId());
-            clientDTO.setAccountDTOS(accounts);
-        }
-        else{
-            //throw new NotFoundException("Yaposleni nije pronadjen");
-            clientDTO = null;
-        }
-        return clientDTO;
+        return client.map(cl -> {
+            ClientDTO dto = modelMapper.map(cl, ClientDTO.class);
+            if (cl.getUserClient() != null) {
+                dto.setUserClient(cl.getUserClient().getUsername());
+            }
+
+            return dto;
+        }).orElse(null);
     }
 
     @Transactional
     @Override
     public ClientDTO save(ClientDTO clientDTO) throws Exception {
-        if(clientDTO==null){
-            throw new NullPointerException("Klijent ne moze biti null");
+        if (clientDTO == null) {
+            throw new NullPointerException("Klijent ne može biti null");
         }
-        Client client = clientRepository.save(modelMapper.map(clientDTO,Client.class));
-        return modelMapper.map(client,ClientDTO.class);
+        Client saved = clientRepository.save(modelMapper.map(clientDTO, Client.class));
+        return modelMapper.map(saved, ClientDTO.class);
     }
 
     @Override
@@ -76,53 +85,25 @@ public class ClientImpl implements ServiceInterface<ClientDTO> {
     }
 
     public ClientDTO findByUsername(String username) throws Exception {
-        Optional<Client> client = Optional.ofNullable(clientRepository.findClientByUserClientUsername((String) username));
-        ClientDTO clientDTO;
-        List<AccountDTO> accounts = new ArrayList<>();
-        if(client.isPresent()){
-            clientDTO = modelMapper.map(client.get(),ClientDTO.class);
-            accounts = this.getAccounts(client.get().getId());
-            clientDTO.setAccountDTOS(accounts);
-        }
-        else{
-            //throw new NotFoundException("Yaposleni nije pronadjen");
-            clientDTO = null;
-        }
-        return clientDTO;
-
+        Client client = clientRepository.findClientByUserClientUsername(username);
+        return client != null ? mapClientWithAccounts(client) : null;
     }
 
-    public ClientDTO findByUser(UserDTO userDTO){
+    public ClientDTO findByUser(UserDTO userDTO) {
         User user = modelMapper.map(userDTO, User.class);
-        Optional<Client> client = Optional.ofNullable(clientRepository.findClientByUserClient(user));
-        ClientDTO clientDTO = null;
-        List<AccountDTO> accounts = new ArrayList<>();
-        if(client.isPresent()){
-            clientDTO = modelMapper.map(client.get(),ClientDTO.class);
-            accounts = this.getAccounts(client.get().getId());
-            clientDTO.setAccountDTOS(accounts);
-        }
-
-        return clientDTO;
+        Client client = clientRepository.findClientByUserClient(user);
+        return client != null ? mapClientWithAccounts(client) : null;
     }
 
-    public List<AccountDTO> getAccounts(Integer id){
-
-        List<Account> accounts = accountRepository.findAccountsByClientId(id);
-        if(accounts == null){
-            return null;
+    private ClientDTO mapClientWithAccounts(Client client) {
+        ClientDTO dto = modelMapper.map(client, ClientDTO.class);
+        if (client.getUserClient() != null) {
+            dto.setUserClient(client.getUserClient().getUsername());
         }
-        List<AccountDTO> accountDTOS = new ArrayList<>();
 
-        for(Account a: accounts){
-            AccountDTO accountDTO = modelMapper.map(a, AccountDTO.class);
-//            recipeItemDTO.setMeasureDTO(modelMapper.map(ri.getMeasure(), UnitOfMeasureDTO.class));
-//            recipeItemDTO.setCocktailDTO(modelMapper.map(ri.getCocktail(), CocktailDTO.class));
-//            recipeItemDTO.setIngredientDTO(modelMapper.map(ri.getIngredient(), IngredientDTO.class));
-            accountDTOS.add(accountDTO);
-        }
-        return accountDTOS;
+        return dto;
     }
+
 
 
 

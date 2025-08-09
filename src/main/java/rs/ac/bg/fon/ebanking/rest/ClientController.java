@@ -49,9 +49,5 @@ public class ClientController {
 //        return ResponseEntity.ok().body(clientService.getAccounts(id));
 //    }
 
-    @GetMapping("/{id}/accounts")
-    public List<AccountDTO> getRecipeItems(@PathVariable Integer id) throws Exception {
-        return clientService.getAccounts(id);
-    }
 
 }

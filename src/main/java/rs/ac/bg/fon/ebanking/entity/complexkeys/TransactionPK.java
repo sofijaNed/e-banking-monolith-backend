@@ -1,9 +1,6 @@
 package rs.ac.bg.fon.ebanking.entity.complexkeys;
 
-import jakarta.persistence.Basic;
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,16 +15,18 @@ import java.io.Serializable;
 public class TransactionPK implements Serializable {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Basic(optional = false)
+    @Column(name = "transactionid")
     private Integer transactionid;
 
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Basic(optional = false)
+    @Column(name = "sender")
     private String sender;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Basic(optional = false)
+    @Column(name = "receiver")
     private String receiver;
 }

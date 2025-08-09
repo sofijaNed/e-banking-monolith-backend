@@ -38,15 +38,14 @@ public class Transaction implements Serializable {
     @Column(name = "number")
     private String number;
 
-    @JoinColumn(name="sender",referencedColumnName = "id", insertable = false, updatable = false)
-    @ManyToOne(optional = false)
-    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name="sender", referencedColumnName = "id", insertable = false, updatable = false)    @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Account sender;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name="receiver", referencedColumnName = "id", insertable = false, updatable = false)
-    @ManyToOne(optional = false)
     @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

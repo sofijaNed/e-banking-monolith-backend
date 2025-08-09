@@ -33,11 +33,11 @@ public class ClientDTO {
 
     private String address;
 
-    private UserDTO userClient;
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Collection<AccountDTO> accountDTOS;
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Collection<LoanDTO> loanDTOS;
+    private String userClient;
+//
+//    @JsonInclude(JsonInclude.Include.NON_NULL)
+//    private Collection<AccountDTO> accounts;
+//
+//    @JsonInclude(JsonInclude.Include.NON_NULL)
+//    private Collection<LoanDTO> loans;
 }

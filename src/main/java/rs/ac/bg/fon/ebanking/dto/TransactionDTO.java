@@ -30,9 +30,4 @@ public class TransactionDTO {
 
     private String number;
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private AccountDTO senderDTO;
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private AccountDTO receiverDTO;
 }

@@ -40,7 +40,8 @@ public class TransactionImpl implements ServiceInterface<TransactionDTO> {
 
     @Override
     public List<TransactionDTO> findAll() {
-        return transactionRepository.findAll().stream().map(transaction->modelMapper.map(transaction, TransactionDTO.class))
+        return transactionRepository.findAll().stream()
+                .map(transaction -> modelMapper.map(transaction, TransactionDTO.class))
                 .collect(Collectors.toList());
     }
 
@@ -65,8 +66,6 @@ public class TransactionImpl implements ServiceInterface<TransactionDTO> {
         validateTransactionDTO(dto);
 
         Transaction transaction = modelMapper.map(dto, Transaction.class);
-        transaction.setSender(modelMapper.map(dto.getSenderDTO(), Account.class));
-        transaction.setReceiver(modelMapper.map(dto.getReceiverDTO(), Account.class));
 
         updateSenderBalance(transaction);
         updateReceiverBalance(transaction);
@@ -77,8 +76,6 @@ public class TransactionImpl implements ServiceInterface<TransactionDTO> {
 
     private void validateTransactionDTO(TransactionDTO dto) {
         if (dto == null) throw new NullPointerException("Transaction cannot be null");
-        if (dto.getSenderDTO() == null) throw new IllegalArgumentException("Sender cannot be null");
-        if (dto.getReceiverDTO() == null) throw new IllegalArgumentException("Receiver cannot be null");
         if (dto.getAmount() <= 0) throw new IllegalArgumentException("Amount must be greater than 0");
     }
 
@@ -103,5 +100,21 @@ public class TransactionImpl implements ServiceInterface<TransactionDTO> {
     @Override
     public TransactionDTO update(TransactionDTO transactionDTO) throws Exception {
         return null;
+    }
+
+    public List<TransactionDTO> findBySenderId(String senderId){
+
+        return transactionRepository.findAll().stream()
+                .filter(transaction -> transaction.getTransactionPK().getSender().equals(senderId))
+                .map(transaction->modelMapper.map(transaction, TransactionDTO.class))
+                .toList();
+    }
+
+    public List<TransactionDTO> findByReceiverId(String receiverId){
+
+        return transactionRepository.findAll().stream()
+                .filter(transaction -> transaction.getTransactionPK().getReceiver().equals(receiverId))
+                .map(transaction->modelMapper.map(transaction, TransactionDTO.class))
+                .toList();
     }
 }

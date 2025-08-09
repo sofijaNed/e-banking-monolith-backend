@@ -37,4 +37,14 @@ public class TransactionController {
         System.out.println("Ovde sam");
         return new ResponseEntity<>(transactionService.save(transactionDTO), HttpStatus.CREATED);
     }
+
+    @GetMapping("/sender/{id}")
+    public ResponseEntity<List<TransactionDTO>> findBySenderId(@PathVariable("id") String id) throws Exception {
+        return ResponseEntity.ok().body(transactionService.findBySenderId(id));
+    }
+
+    @GetMapping("/receiver/{id}")
+    public ResponseEntity<List<TransactionDTO>> findByReceiverId(@PathVariable("id") String id) throws Exception {
+        return ResponseEntity.ok().body(transactionService.findByReceiverId(id));
+    }
 }

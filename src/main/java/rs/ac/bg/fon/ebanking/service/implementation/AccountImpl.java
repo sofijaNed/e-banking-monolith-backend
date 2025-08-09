@@ -20,7 +20,6 @@ public class AccountImpl implements ServiceInterface<AccountDTO> {
 
     private AccountRepository accountRepository;
     private ClientImpl clientImpl;
-
     private ModelMapper modelMapper;
 
     @Autowired
@@ -28,64 +27,79 @@ public class AccountImpl implements ServiceInterface<AccountDTO> {
         this.accountRepository = accountRepository;
         this.clientImpl = clientImpl;
         this.modelMapper = modelMapper;
+        this.modelMapper.typeMap(AccountDTO.class, Account.class)
+                .addMappings(mapper -> mapper.skip(Account::setClient));
+        this.modelMapper.typeMap(Account.class, AccountDTO.class)
+                .addMappings(mapper -> mapper.skip(AccountDTO::setClient));
     }
 
     @Override
     public List<AccountDTO> findAll() {
-        List<Account> accounts = accountRepository.findAll();
-        List<AccountDTO> accountDTOS = new ArrayList<>();
-        for(Account account:accounts){
-            ClientDTO clientDTO = modelMapper.map(account.getClient(),ClientDTO.class);
-            AccountDTO accountDTO = modelMapper.map(account,AccountDTO.class);
-            accountDTO.setClientDTO(clientDTO);
-            accountDTOS.add(accountDTO);
-        }
-        return accountDTOS;
+        return accountRepository.findAll().stream()
+                .map(account -> {
+                    AccountDTO dto = modelMapper.map(account, AccountDTO.class);
+                    if (account.getClient() != null) {
+                        dto.setClient(account.getClient().getId());
+                    }
+                    return dto;
+                })
+                .toList();
     }
 
     @Override
     public AccountDTO findById(Object id) throws Exception {
+        Optional<Account> accountOpt = accountRepository.findById((String) id);
+        if (accountOpt.isEmpty()) return null;
 
-        Optional<Account> account = accountRepository.findById((String)id);
-        AccountDTO accountDTO;
-        if(account.isPresent()){
-            ClientDTO clientDTO = null;
-            if(account.get().getClient() != null) {
-                 clientDTO = modelMapper.map(account.get().getClient(), ClientDTO.class);
-            }
-            accountDTO = modelMapper.map(account.get(),AccountDTO.class);
-
-            accountDTO.setClientDTO(clientDTO);
-
-
+        Account account = accountOpt.get();
+        AccountDTO dto = modelMapper.map(account, AccountDTO.class);
+        if (account.getClient() != null) {
+            dto.setClient(account.getClient().getId());
         }
-        else{
-           // throw new NotFoundException("Odgovor nije pronadjen");
-            accountDTO = null;
-        }
-        return accountDTO;
+        return dto;
     }
 
     @Transactional
     @Override
     public AccountDTO save(AccountDTO accountDTO) throws Exception {
         if (accountDTO == null) {
-            throw new NullPointerException("Racun ne moze biti null");
+            throw new NullPointerException("AccountDTO cannot be null");
         }
 
+        Account account = modelMapper.map(accountDTO, Account.class);
 
-        Account account = modelMapper.map(accountDTO,Account.class);
-        Client client = null;
-        if(account.getClient() != null) {
-            client = modelMapper.map(account.getClient(), Client.class);
+        if (accountDTO.getClient() != null) {
+            ClientDTO clientDTO = clientImpl.findById(accountDTO.getClient());
+            if (clientDTO == null) {
+                throw new IllegalArgumentException("Client not found for ID: " + accountDTO.getClient());
+            }
+            Client client = modelMapper.map(clientDTO, Client.class);
+            account.setClient(client);
         }
-        account.setClient(client);
-        Account savedAccount = accountRepository.save(account);
-        return modelMapper.map(savedAccount, AccountDTO.class);
+
+        Account saved = accountRepository.save(account);
+        AccountDTO resultDTO = modelMapper.map(saved, AccountDTO.class);
+        resultDTO.setClient(saved.getClient() != null ? saved.getClient().getId() : null);
+        return resultDTO;
     }
 
     @Override
     public AccountDTO update(AccountDTO accountDTO) throws Exception {
         return null;
+    }
+
+    public List<AccountDTO> getAccountsByClientId(Integer clientId) {
+        List<Account> accounts = accountRepository.findAccountsByClientId(clientId);
+        if (accounts == null || accounts.isEmpty()) return new ArrayList<>();
+
+        return accounts.stream()
+                .map(account -> {
+                    AccountDTO dto = modelMapper.map(account, AccountDTO.class);
+                    if (account.getClient() != null) {
+                        dto.setClient(account.getClient().getId());
+                    }
+                    return dto;
+                })
+                .toList();
     }
 }

@@ -7,4 +7,5 @@ import rs.ac.bg.fon.ebanking.entity.complexkeys.TransactionPK;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, TransactionPK> {
+
 }

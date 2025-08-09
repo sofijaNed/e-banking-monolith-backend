@@ -36,22 +36,8 @@ public class Account implements Serializable {
     @Column(name = "opened")
     private LocalDate opened;
 
-    @JoinColumn(name="clientid",referencedColumnName = "id")
-    //@ManyToOne(optional = false)
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="clientid")
     @JsonIgnore
     private Client client;
-
-    @OneToMany(mappedBy = "sender")
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    @Cascade(org.hibernate.annotations.CascadeType.SAVE_UPDATE)
-    private Collection<Transaction> sentTransactions;
-
-    @OneToMany(mappedBy = "receiver")
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    @Cascade(org.hibernate.annotations.CascadeType.SAVE_UPDATE)
-    private Collection<Transaction> receivedTransactions;
-
 }

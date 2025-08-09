@@ -36,5 +36,10 @@ public class AccountController {
         return new ResponseEntity<>(accountService.save(accountDTO), HttpStatus.CREATED);
     }
 
+    @GetMapping("/clients/{id}")
+    public ResponseEntity<List<AccountDTO>> getAccountsByClient(@PathVariable Integer id) {
+        List<AccountDTO> accounts = accountService.getAccountsByClientId(id);
+        return ResponseEntity.ok(accounts);
+    }
 
 }

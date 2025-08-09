@@ -23,12 +23,6 @@ public class AccountDTO {
 
     private LocalDate opened;
 
-    //@JsonInclude(JsonInclude.Include.NON_NULL)
-    private ClientDTO clientDTO;
+    private Integer client;
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Collection<TransactionDTO> sentTransactions;
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Collection<TransactionDTO> receivedTransactions;
 }
