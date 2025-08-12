@@ -48,7 +48,7 @@ public class AccountImpl implements ServiceInterface<AccountDTO> {
 
     @Override
     public AccountDTO findById(Object id) throws Exception {
-        Optional<Account> accountOpt = accountRepository.findById((String) id);
+        Optional<Account> accountOpt = accountRepository.findById((Long) id);
         if (accountOpt.isEmpty()) return null;
 
         Account account = accountOpt.get();
@@ -83,12 +83,41 @@ public class AccountImpl implements ServiceInterface<AccountDTO> {
         return resultDTO;
     }
 
+    @Transactional
     @Override
     public AccountDTO update(AccountDTO accountDTO) throws Exception {
-        return null;
+        if (accountDTO.getId() == null) {
+            throw new IllegalArgumentException("ID je obavezan za update");
+        }
+        Optional<Account> existingOpt = accountRepository.findById(accountDTO.getId());
+        if (existingOpt.isEmpty()) {
+            throw new IllegalArgumentException("Nalog ne postoji");
+        }
+
+        Account existing = existingOpt.get();
+        modelMapper.map(accountDTO, existing);
+
+        if (accountDTO.getClient() != null) {
+            ClientDTO clientDTO = clientImpl.findById(accountDTO.getClient());
+            if (clientDTO == null) {
+                throw new IllegalArgumentException("Klijent ne postoji za ID: " + accountDTO.getClient());
+            }
+            existing.setClient(modelMapper.map(clientDTO, Client.class));
+        }
+
+        Account updated = accountRepository.save(existing);
+        return mapToDTO(updated);
     }
 
-    public List<AccountDTO> getAccountsByClientId(Integer clientId) {
+    private AccountDTO mapToDTO(Account account) {
+        AccountDTO dto = modelMapper.map(account, AccountDTO.class);
+        if (account.getClient() != null) {
+            dto.setClient(account.getClient().getId());
+        }
+        return dto;
+    }
+
+    public List<AccountDTO> getAccountsByClientId(Long clientId) {
         List<Account> accounts = accountRepository.findAccountsByClientId(clientId);
         if (accounts == null || accounts.isEmpty()) return new ArrayList<>();
 

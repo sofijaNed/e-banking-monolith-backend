@@ -58,7 +58,7 @@ public class ClientImpl implements ServiceInterface<ClientDTO> {
 
     @Override
     public ClientDTO findById(Object id) throws Exception {
-        Optional<Client> client = clientRepository.findById((Integer) id);
+        Optional<Client> client = clientRepository.findById((Long) id);
         return client.map(cl -> {
             ClientDTO dto = modelMapper.map(cl, ClientDTO.class);
             if (cl.getUserClient() != null) {

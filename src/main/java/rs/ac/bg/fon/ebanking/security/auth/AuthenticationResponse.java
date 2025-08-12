@@ -14,7 +14,7 @@ public class AuthenticationResponse {
     /**
      * Primary key of entity that connects to user
      */
-    private Integer id;
+    private Long id;
 
     /**
      * Represent JWT access token of user.

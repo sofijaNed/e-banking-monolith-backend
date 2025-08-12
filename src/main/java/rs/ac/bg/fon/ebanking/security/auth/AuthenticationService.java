@@ -12,6 +12,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import rs.ac.bg.fon.ebanking.audit.Audit;
+import rs.ac.bg.fon.ebanking.audit.AuditRepository;
 import rs.ac.bg.fon.ebanking.dao.ClientRepository;
 import rs.ac.bg.fon.ebanking.dao.EmployeeRepository;
 import rs.ac.bg.fon.ebanking.dao.UserRepository;
@@ -28,6 +30,11 @@ import rs.ac.bg.fon.ebanking.entity.Role;
 import rs.ac.bg.fon.ebanking.service.implementation.ClientImpl;
 
 import java.io.IOException;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+
+import rs.ac.bg.fon.ebanking.audit.AuditRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -56,6 +63,7 @@ public class AuthenticationService {
     private final ModelMapper modelMapper;
 
     private final ClientImpl clientImpl;
+    private final AuditRepository auditRepository;
 
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
@@ -69,21 +77,33 @@ public class AuthenticationService {
         revokeAllMemberTokens(user);
         saveMemberToken(user,jwtToken);
 
-        Integer id;
+        Long id;
         String role;
+        String name = "";
 
-        if(!user.getUsername().contains("employee")){
+        if(user.getRole() == Role.ROLE_CLIENT){
 
             Client client = clientRepository.findClientByUserClientUsername(user.getUsername());
             id = client.getId();
             role=Role.ROLE_CLIENT.name();
+            name = client.getFirstname();
 
         }
-        else{
+        else {
             Employee employee = employeeRepository.findEmployeeByUserEmployeeUsername(user.getUsername());
             id = employee.getId();
             role = Role.ROLE_EMPLOYEE.name();
+            name = employee.getFirstname();
         }
+
+        Audit audit = new Audit();
+        audit.setTableName("users");
+        audit.setRecordId(id);
+        audit.setAction("LOGIN");
+        audit.setChangedAt(Instant.now());
+        audit.setChangedBy(name);
+
+        auditRepository.save(audit);
 
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
@@ -113,33 +133,6 @@ public class AuthenticationService {
     }
 
 
-
-//    public void refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
-//        System.out.println("U refres tokenu sam.");
-//        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-//        final String refreshToken;
-//        final String userUsername;
-//        if(authHeader==null || !authHeader.startsWith("Bearer ")){
-//            return;
-//        }
-//        refreshToken = authHeader.substring(7);
-//        userUsername = jwtService.extractUsername(refreshToken);
-//        if(userUsername!=null){
-//            var user = this.userRepository.findByUsername(userUsername)
-//                    .orElseThrow();
-//            if(jwtService.isTokenValid(refreshToken,user)){
-//                var accessToken = jwtService.generateToken(user);
-//                revokeAllMemberTokens(user);
-//                saveMemberToken(user,accessToken);
-//                var authResponse = AuthenticationResponse.builder()
-//                        .accessToken(accessToken)
-//                        .refreshToken(refreshToken)
-//                        .build();
-//                new ObjectMapper().writeValue(response.getOutputStream(),authResponse);
-//            }
-//        }
-//    }
-
     public void refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("In refresh token method.");
 
@@ -156,37 +149,51 @@ public class AuthenticationService {
         refreshToken = authHeader.substring(7); // Extract refresh token
         userUsername = jwtService.extractUsername(refreshToken);
 
-        // If username is present and the token is valid
-        if (userUsername != null) {
-            var user = userRepository.findByUsername(userUsername)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-            // Ensure the refresh token itself is valid
-            if (jwtService.isTokenValid(refreshToken, user)) {
-                // Generate new access token
-                var newAccessToken = jwtService.generateToken(user);
-
-                // Invalidate all existing tokens and save the new one
-                revokeAllMemberTokens(user);
-                saveMemberToken(user, newAccessToken);
-
-                // Construct authentication response
-                var authResponse = AuthenticationResponse.builder()
-                        .accessToken(newAccessToken)
-                        .refreshToken(refreshToken) // Same refresh token is returned
-                        .build();
-
-                // Write the response to output stream
-                new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
-            } else {
-                // If the refresh token is invalid, return unauthorized status
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid or expired refresh token");
-            }
-        } else {
-            // If username extraction fails, return unauthorized status
+        if (userUsername == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
         }
+        // If username is present and the token is valid
+        var user = userRepository.findByUsername(userUsername)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        var storedRefreshOpt = tokenRepository.findByToken(refreshToken);
+        if (storedRefreshOpt.isEmpty() || storedRefreshOpt.get().isRevoked() || storedRefreshOpt.get().isExpired()) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
+        // 2) Ensure signature and expiry valid
+        if (!jwtService.isTokenValid(refreshToken, user)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
+        var storedRefresh = storedRefreshOpt.get();
+        storedRefresh.setRevoked(true);
+        storedRefresh.setExpired(true);
+        tokenRepository.save(storedRefresh);
+
+        // 4) Create new access and new refresh token
+        var newAccessToken = jwtService.generateToken(user);
+        var newRefreshToken = jwtService.generateRefreshToken(user);
+
+        saveMemberToken(user, newAccessToken); // access token saved as before
+        // save new refresh token with TokenType.REFRESH (or the same enum if extended)
+        var refreshTokenEntity = Token.builder()
+                .token(newRefreshToken)
+                .user(user)
+                .tokenType(TokenType.BEARER) // ideally REFRESH if you add it
+                .expired(false)
+                .revoked(false)
+                .build();
+        tokenRepository.save(refreshTokenEntity);
+
+        var authResponse = AuthenticationResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .build();
+        new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
     }
 
 

@@ -35,7 +35,7 @@ public class EmployeeImpl implements ServiceInterface<EmployeeDTO> {
 
     @Override
     public EmployeeDTO findById(Object id) throws Exception {
-        Optional<Employee> employee = employeeRepository.findById((Integer) id);
+        Optional<Employee> employee = employeeRepository.findById((Long) id);
         EmployeeDTO employeeDTO;
         if(employee.isPresent()){
             employeeDTO = modelMapper.map(employee.get(),EmployeeDTO.class);

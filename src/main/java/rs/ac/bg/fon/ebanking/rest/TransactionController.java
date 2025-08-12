@@ -6,7 +6,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import rs.ac.bg.fon.ebanking.dto.EmployeeDTO;
 import rs.ac.bg.fon.ebanking.dto.TransactionDTO;
-import rs.ac.bg.fon.ebanking.entity.complexkeys.TransactionPK;
 import rs.ac.bg.fon.ebanking.service.implementation.TransactionImpl;
 
 import java.util.List;
@@ -28,7 +27,7 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TransactionDTO> findById(@PathVariable("id") TransactionPK id) throws Exception {
+    public ResponseEntity<TransactionDTO> findById(@PathVariable("id") Long id) throws Exception {
         return ResponseEntity.ok().body(transactionService.findById(id));
     }
 
@@ -40,11 +39,11 @@ public class TransactionController {
 
     @GetMapping("/sender/{id}")
     public ResponseEntity<List<TransactionDTO>> findBySenderId(@PathVariable("id") String id) throws Exception {
-        return ResponseEntity.ok().body(transactionService.findBySenderId(id));
+        return ResponseEntity.ok().body(transactionService.findBySenderAccountNumber(id));
     }
 
     @GetMapping("/receiver/{id}")
     public ResponseEntity<List<TransactionDTO>> findByReceiverId(@PathVariable("id") String id) throws Exception {
-        return ResponseEntity.ok().body(transactionService.findByReceiverId(id));
+        return ResponseEntity.ok().body(transactionService.findByReceiverAccountNumber(id));
     }
 }

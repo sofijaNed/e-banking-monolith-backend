@@ -5,6 +5,6 @@ import org.springframework.stereotype.Repository;
 import rs.ac.bg.fon.ebanking.entity.Employee;
 
 @Repository
-public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
+public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     Employee findEmployeeByUserEmployeeUsername(String username);
 }

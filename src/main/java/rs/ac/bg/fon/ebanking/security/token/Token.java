@@ -15,7 +15,7 @@ public class Token implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Integer id;
+    public Long id;
 
 
     @Column(name="token",unique = true)
@@ -23,7 +23,7 @@ public class Token implements Serializable {
 
 
     @Enumerated(EnumType.STRING)
-    @Column(name="type")
+    @Column(name="token_type")
     public TokenType tokenType = TokenType.BEARER;
 
 
@@ -34,6 +34,6 @@ public class Token implements Serializable {
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="user",referencedColumnName = "username")
+    @JoinColumn(name="username",referencedColumnName = "username")
     public User user;
 }

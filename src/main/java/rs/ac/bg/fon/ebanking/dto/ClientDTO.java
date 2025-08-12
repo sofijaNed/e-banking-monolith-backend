@@ -19,7 +19,7 @@ import java.util.Collection;
 
 @Data
 public class ClientDTO {
-    private Integer id;
+    private Long id;
 
     private String firstname;
 

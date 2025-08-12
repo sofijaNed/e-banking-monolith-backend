@@ -11,11 +11,17 @@ import rs.ac.bg.fon.ebanking.entity.User;
 @Data
 public class EmployeeDTO {
 
-    private Integer id;
+    private Long id;
 
     private String firstname;
 
     private String lastname;
+
+    private String email;
+
+    private String phone;
+
+    private String position;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private UserDTO userEmployee;

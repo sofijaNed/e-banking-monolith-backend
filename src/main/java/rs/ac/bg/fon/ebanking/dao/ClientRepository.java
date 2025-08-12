@@ -8,7 +8,7 @@ import rs.ac.bg.fon.ebanking.entity.User;
 import java.util.Optional;
 
 @Repository
-public interface ClientRepository extends JpaRepository<Client, Integer> {
+public interface ClientRepository extends JpaRepository<Client, Long> {
     Client findClientByUserClient(User user);
     Client findClientByUserClientUsername(String username);
 }

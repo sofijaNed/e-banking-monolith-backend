@@ -8,21 +8,21 @@ import rs.ac.bg.fon.ebanking.entity.AccountType;
 import rs.ac.bg.fon.ebanking.entity.Currency;
 
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
 
 @Data
 public class AccountDTO {
-    private String id;
 
-    private AccountType type;
-
-    private Double balance;
-
-    private Currency currency;
-
+    private Long id;
+    private String accountNumber;
+    private String type;
+    private String iban;
+    private BigDecimal balance;
+    private BigDecimal availableBalance;
+    private String currency;
     private LocalDate opened;
-
-    private Integer client;
+    private Long client;
 
 }

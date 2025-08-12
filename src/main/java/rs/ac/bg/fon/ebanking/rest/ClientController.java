@@ -30,7 +30,7 @@ public class ClientController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ClientDTO> findById(@PathVariable("id") Integer id) throws Exception {
+    public ResponseEntity<ClientDTO> findById(@PathVariable("id") Long id) throws Exception {
         return ResponseEntity.ok().body(clientService.findById(id));
     }
 

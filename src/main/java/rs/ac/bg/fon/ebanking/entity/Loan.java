@@ -2,13 +2,15 @@ package rs.ac.bg.fon.ebanking.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import rs.ac.bg.fon.ebanking.audit.AuditEntityListener;
+import rs.ac.bg.fon.ebanking.audit.Auditable;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name="loan")
@@ -16,33 +18,54 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Loan implements Serializable {
+@EqualsAndHashCode(callSuper = false)
+public class Loan extends Auditable implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name="id")
-    private Integer id;
+    private Long id;
 
-    @Column(name = "principal_amount")
-    private Double principal_amount;
+    @Column(name = "principal_amount", precision=19, scale=4)
+    private BigDecimal principalAmount;
 
-    @Column(name = "interest_rate")
-    private Double interest_rate;
+    @Column(name = "interest_rate", precision=19, scale=4)
+    private BigDecimal interestRate;
 
-    @Column(name = "loan_term")
-    private LocalDate loan_term;
+    @Column(name = "term_months")
+    private Integer termMonths;
+
+    @Column(name = "currency")
+    private String currency;
+
+    @Column(name = "note")
+    private String note;
 
     @Column(name = "date_issued")
-    private LocalDate date_issued;
+    private LocalDate dateIssued;
 
-    @Column(name = "monthly_payment")
-    private Double monthly_payment;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private LoanStatus status;
 
-    @Column(name = "outstanding_balance")
-    private Double outstanding_balance;
+    @Column(name = "monthly_payment", precision=19, scale=4)
+    private BigDecimal monthlyPayment;
 
-    @JoinColumn(name="clientid",referencedColumnName = "id")
+    @Column(name = "outstanding_balance", precision=19, scale=4)
+    private BigDecimal outstandingBalance;
+
+    @JoinColumn(name="account_id",referencedColumnName = "id")
     @ManyToOne(optional = false)
     @JsonIgnore
-    private Client client;
+    private Account account;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="approved_by")
+    private Employee approvedBy;
+
+    @Column(name = "approved_at")
+    private LocalDate approvedAt;
+
+    @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LoanPayment> payments = new ArrayList<>();
 }

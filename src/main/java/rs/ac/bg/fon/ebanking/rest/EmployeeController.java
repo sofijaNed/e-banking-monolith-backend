@@ -27,7 +27,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<EmployeeDTO> findById(@PathVariable("id") Integer id) throws Exception {
+    public ResponseEntity<EmployeeDTO> findById(@PathVariable("id") Long id) throws Exception {
         return ResponseEntity.ok().body(employeeService.findById(id));
     }
 

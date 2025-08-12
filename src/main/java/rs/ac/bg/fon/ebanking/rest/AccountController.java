@@ -27,7 +27,7 @@ public class AccountController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AccountDTO> findById(@PathVariable("id") String id) throws Exception {
+    public ResponseEntity<AccountDTO> findById(@PathVariable("id") Long id) throws Exception {
         return ResponseEntity.ok().body(accountService.findById(id));
     }
 
@@ -37,7 +37,7 @@ public class AccountController {
     }
 
     @GetMapping("/clients/{id}")
-    public ResponseEntity<List<AccountDTO>> getAccountsByClient(@PathVariable Integer id) {
+    public ResponseEntity<List<AccountDTO>> getAccountsByClient(@PathVariable Long id) {
         List<AccountDTO> accounts = accountService.getAccountsByClientId(id);
         return ResponseEntity.ok(accounts);
     }

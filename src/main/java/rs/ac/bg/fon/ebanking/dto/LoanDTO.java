@@ -8,24 +8,21 @@ import jakarta.persistence.ManyToOne;
 import lombok.Data;
 import rs.ac.bg.fon.ebanking.entity.Client;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
 public class LoanDTO {
-    private Integer id;
-
-    private Double principal_amount;
-
-    private Double interest_rate;
-
-    private LocalDate loan_term;
-
-    private LocalDate date_issued;
-
-    private Double monthly_payment;
-
-    private Double outstanding_balance;
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private ClientDTO clientDTO;
+    private Long id;
+    private BigDecimal principalAmount;
+    private BigDecimal interestRate;
+    private Integer termMonths;
+    private String currency;
+    private String note;
+    private LocalDate dateIssued;
+    private BigDecimal monthlyPayment;
+    private BigDecimal outstandingBalance;
+    private Long account;
+    private Long approvedBy;
+    private LocalDate approvedAt;
 }
