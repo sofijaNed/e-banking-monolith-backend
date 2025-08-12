@@ -47,6 +47,10 @@ public class EmployeeImpl implements ServiceInterface<EmployeeDTO> {
         return employeeDTO;
     }
 
+    public EmployeeDTO findByUsername(String username) throws Exception {
+        return modelMapper.map(employeeRepository.findEmployeeByUserEmployeeUsername(username), EmployeeDTO.class);
+    }
+
     @Transactional
     @Override
     public EmployeeDTO save(EmployeeDTO employeeDTO) throws Exception {

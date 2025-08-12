@@ -27,6 +27,7 @@ import rs.ac.bg.fon.ebanking.security.token.Token;
 import rs.ac.bg.fon.ebanking.security.token.TokenRepository;
 import rs.ac.bg.fon.ebanking.security.token.TokenType;
 import rs.ac.bg.fon.ebanking.entity.Role;
+import rs.ac.bg.fon.ebanking.security.twofactorauth.OtpService;
 import rs.ac.bg.fon.ebanking.service.implementation.ClientImpl;
 
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class AuthenticationService {
 
     private final AuthenticationManager authenticationManager;
     private final ModelMapper modelMapper;
-
+    private final OtpService otpService;
     private final ClientImpl clientImpl;
     private final AuditRepository auditRepository;
 
@@ -72,6 +73,17 @@ public class AuthenticationService {
         var user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(()->new BadCredentialsException("Data is not valid."));
 
+        if (user.getTwoFactorEnabled() && Boolean.TRUE.equals(request.isUse2fa())) {
+            String preAuthToken = jwtService.generatePreAuthToken(user);
+
+            otpService.generateAndSendOtp(user, request.getEmail(), "LOGIN_2FA");
+
+            return AuthenticationResponse.builder()
+                    .twoFactorRequired(true)
+                    .preAuthToken(preAuthToken)
+                    .message("OTP poslat na email")
+                    .build();
+        }
         var jwtToken = jwtService.generateToken(user);
         var refreshToken = jwtService.generateRefreshToken(user);
         revokeAllMemberTokens(user);
@@ -108,7 +120,7 @@ public class AuthenticationService {
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
-                .id(id)
+                .username(user.getUsername())
                 .role(role)
                 .message("Succesfull logging.")
                 .build();
@@ -130,6 +142,46 @@ public class AuthenticationService {
             return modelMapper.map(employee, EmployeeDTO.class);
         }
 
+    }
+
+    public AuthenticationResponse completeAuthentication(User user) {
+        var jwtToken = jwtService.generateToken(user);
+        var refreshToken = jwtService.generateRefreshToken(user);
+        revokeAllMemberTokens(user);
+        saveMemberToken(user, jwtToken);
+
+        Long id;
+        String role;
+        String name = "";
+
+        if (user.getRole() == Role.ROLE_CLIENT) {
+            Client client = clientRepository.findClientByUserClientUsername(user.getUsername());
+            id = client.getId();
+            role = Role.ROLE_CLIENT.name();
+            name = client.getFirstname();
+        } else {
+            Employee employee = employeeRepository.findEmployeeByUserEmployeeUsername(user.getUsername());
+            id = employee.getId();
+            role = Role.ROLE_EMPLOYEE.name();
+            name = employee.getFirstname();
+        }
+
+        Audit audit = new Audit();
+        audit.setTableName("users");
+        audit.setRecordId(id);
+        audit.setAction("LOGIN");
+        audit.setChangedAt(Instant.now());
+        audit.setChangedBy(name);
+        auditRepository.save(audit);
+
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .refreshToken(refreshToken)
+                .username(user.getUsername())
+                .twoFactorRequired(false)
+                .role(user.getRole().name())
+                .message("Successfully verified OTP")
+                .build();
     }
 
 

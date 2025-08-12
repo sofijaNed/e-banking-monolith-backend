@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import rs.ac.bg.fon.ebanking.dto.ClientDTO;
 import rs.ac.bg.fon.ebanking.dto.EmployeeDTO;
 //import rs.ac.bg.fon.ebanking.exception.type.NotFoundException;
 import rs.ac.bg.fon.ebanking.service.implementation.EmployeeImpl;
@@ -34,5 +35,11 @@ public class EmployeeController {
     @PostMapping
     public ResponseEntity<EmployeeDTO> save( @RequestBody EmployeeDTO employeeDTO) throws Exception {
         return new ResponseEntity<>(employeeService.save(employeeDTO), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/byUser/{username}")
+    public ResponseEntity<EmployeeDTO> findByUser(@PathVariable("username") String username) throws Exception {
+
+        return ResponseEntity.ok().body(employeeService.findByUsername(username));
     }
 }

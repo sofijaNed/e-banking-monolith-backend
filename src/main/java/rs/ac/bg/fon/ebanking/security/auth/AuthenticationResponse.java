@@ -14,7 +14,7 @@ public class AuthenticationResponse {
     /**
      * Primary key of entity that connects to user
      */
-    private Long id;
+    private String username;
 
     /**
      * Represent JWT access token of user.
@@ -37,5 +37,8 @@ public class AuthenticationResponse {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String role;
+
+    private boolean twoFactorRequired;
+    private String preAuthToken;
 
 }

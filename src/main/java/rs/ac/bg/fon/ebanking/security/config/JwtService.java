@@ -1,6 +1,7 @@
 package rs.ac.bg.fon.ebanking.security.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import io.jsonwebtoken.Claims;
@@ -8,6 +9,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import rs.ac.bg.fon.ebanking.entity.User;
 
 import java.security.Key;
 import java.util.Date;
@@ -96,5 +98,30 @@ public class JwtService {
     private Key getSignInKey(){
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String generatePreAuthToken(User user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("username", user.getUsername());
+        claims.put("2fa", true); // flag da je ovo 2FA token
+        claims.put("purpose", "LOGIN_2FA");
+
+        long expirationMillis = 3 * 60 * 1000;
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(user.getUsername())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMillis))
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String extractUsernameFromPreAuth(String token) {
+        Claims claims = extractAllClaims(token);
+        if (!"LOGIN_2FA".equals(claims.get("purpose"))) {
+            throw new BadCredentialsException("Invalid preAuth token");
+        }
+        return claims.getSubject();
     }
 }

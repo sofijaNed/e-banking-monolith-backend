@@ -37,6 +37,12 @@ public class User implements Serializable, UserDetails {
     @Column(name="role")
     private Role role;
 
+    @Column(name = "two_factor_enabled", nullable = false)
+    private Boolean twoFactorEnabled = false;
+
+    @Column(name = "two_factor_method")
+    private String twoFactorMethod;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

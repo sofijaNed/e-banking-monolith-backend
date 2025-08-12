@@ -102,7 +102,7 @@ class AuthenticationServiceTest {
         assertNotNull(response);
         assertEquals("access-token", response.getAccessToken());
         assertEquals("refresh-token", response.getRefreshToken());
-        assertEquals(42, response.getId().intValue());
+        assertEquals("client1", response.getUsername());
         assertEquals("ROLE_CLIENT", response.getRole());
         verify(tokenRepository, atLeastOnce()).save(any()); // saveMemberToken pozvan
     }
@@ -137,7 +137,7 @@ class AuthenticationServiceTest {
         assertNotNull(resp);
         assertEquals("access", resp.getAccessToken());
         assertEquals("refresh", resp.getRefreshToken());
-        assertEquals(7, resp.getId().intValue());
+        assertEquals("employee1", resp.getUsername());
         assertEquals("ROLE_EMPLOYEE", resp.getRole());
     }
 
