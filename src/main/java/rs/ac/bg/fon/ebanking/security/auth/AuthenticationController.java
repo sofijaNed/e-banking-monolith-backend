@@ -10,15 +10,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import rs.ac.bg.fon.ebanking.dao.UserRepository;
-import rs.ac.bg.fon.ebanking.entity.User;
+import rs.ac.bg.fon.ebanking.user.UserRepository;
+import rs.ac.bg.fon.ebanking.user.User;
 import rs.ac.bg.fon.ebanking.security.config.JwtService;
 import rs.ac.bg.fon.ebanking.security.twofactorauth.OtpService;
 import rs.ac.bg.fon.ebanking.security.twofactorauth.VerifyOtpRequest;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController

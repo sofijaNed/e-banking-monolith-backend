@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import rs.ac.bg.fon.ebanking.entity.User;
+import rs.ac.bg.fon.ebanking.user.User;
 
 import java.time.LocalDateTime;
 

@@ -3,7 +3,7 @@ package rs.ac.bg.fon.ebanking.security.token;
 import java.io.Serializable;
 import jakarta.persistence.*;
 import lombok.*;
-import rs.ac.bg.fon.ebanking.entity.User;
+import rs.ac.bg.fon.ebanking.user.User;
 
 @Entity
 @Table(name="token")

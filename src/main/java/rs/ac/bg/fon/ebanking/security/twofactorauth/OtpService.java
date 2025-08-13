@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import rs.ac.bg.fon.ebanking.entity.User;
+import rs.ac.bg.fon.ebanking.user.User;
 
 import java.time.LocalDateTime;
 

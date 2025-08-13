@@ -14,28 +14,23 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import rs.ac.bg.fon.ebanking.audit.Audit;
 import rs.ac.bg.fon.ebanking.audit.AuditRepository;
-import rs.ac.bg.fon.ebanking.dao.ClientRepository;
-import rs.ac.bg.fon.ebanking.dao.EmployeeRepository;
-import rs.ac.bg.fon.ebanking.dao.UserRepository;
-import rs.ac.bg.fon.ebanking.dto.ClientDTO;
-import rs.ac.bg.fon.ebanking.dto.EmployeeDTO;
-import rs.ac.bg.fon.ebanking.entity.Client;
-import rs.ac.bg.fon.ebanking.entity.Employee;
-import rs.ac.bg.fon.ebanking.entity.User;
+import rs.ac.bg.fon.ebanking.client.ClientRepository;
+import rs.ac.bg.fon.ebanking.employee.EmployeeRepository;
+import rs.ac.bg.fon.ebanking.user.UserRepository;
+import rs.ac.bg.fon.ebanking.employee.EmployeeDTO;
+import rs.ac.bg.fon.ebanking.client.Client;
+import rs.ac.bg.fon.ebanking.employee.Employee;
+import rs.ac.bg.fon.ebanking.user.User;
 import rs.ac.bg.fon.ebanking.security.config.JwtService;
 import rs.ac.bg.fon.ebanking.security.token.Token;
 import rs.ac.bg.fon.ebanking.security.token.TokenRepository;
 import rs.ac.bg.fon.ebanking.security.token.TokenType;
-import rs.ac.bg.fon.ebanking.entity.Role;
+import rs.ac.bg.fon.ebanking.user.Role;
 import rs.ac.bg.fon.ebanking.security.twofactorauth.OtpService;
-import rs.ac.bg.fon.ebanking.service.implementation.ClientImpl;
+import rs.ac.bg.fon.ebanking.client.ClientImpl;
 
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.LocalDateTime;
-
-import rs.ac.bg.fon.ebanking.audit.AuditRepository;
 
 @Service
 @RequiredArgsConstructor
