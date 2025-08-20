@@ -75,31 +75,6 @@ public class LoanImpl implements ServiceInterface<LoanDTO> {
         return mapToResponse(saved);
     }
 
-//    @Transactional
-//    public LoanResponseDTO approveLoan(Long loanId, Long employeeId, String note) {
-//        Loan loan = loanRepository.findById(loanId)
-//                .orElseThrow(() -> new IllegalArgumentException("Loan not found"));
-//
-//         if (loan.getStatus() != LoanStatus.PENDING) throw new IllegalStateException("Loan not pending");
-//
-//        Employee emp = employeeRepository.findById(employeeId)
-//                .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
-//
-//        loan.setApprovedBy(emp);
-//        loan.setApprovedAt(LocalDate.now());
-//        loan.setNote(note);
-//
-//         loan.setStatus(LoanStatus.APPROVED);
-//
-//        Loan saved = loanRepository.save(loan);
-//
-//        accountRepository.findAccountsByClientId(loan.getClient().getId())
-//                .stream()
-//                .findFirst()
-//                .ifPresent(account -> accountRepository.deposit(account.getId(), loan.getPrincipalAmount()));
-//
-//        return mapToResponse(saved);
-//    }
 
     @Transactional
     public LoanResponseDTO approveLoan(Long loanId, Long employeeId, String note) throws Exception {

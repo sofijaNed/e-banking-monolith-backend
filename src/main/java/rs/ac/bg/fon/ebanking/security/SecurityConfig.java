@@ -1,10 +1,14 @@
 package rs.ac.bg.fon.ebanking.security;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -14,10 +18,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import rs.ac.bg.fon.ebanking.security.filter.JwtAuthenticationFilter;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -30,16 +37,26 @@ public class SecurityConfig {
 
 
     private final JwtAuthenticationFilter jwtAuthFilter;
-
-
     private final AuthenticationProvider authenticationProvider;
-
-
     private final LogoutHandler logoutHandler;
+
+    @Value("${jwt.refresh-cookie-name:refresh_token}")
+    private String refreshCookieName;
+    @Value("${jwt.refresh-cookie-path:/}")
+    private String refreshCookiePath;
+    @Value("${jwt.refresh-cookie-secure:false}")
+    private boolean refreshCookieSecure;
 
 
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        var repo = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        // (opciono, eksplicitno)
+        // repo.setCookieName("XSRF-TOKEN");
+        // repo.setHeaderName("X-XSRF-TOKEN");
+
+        var requestHandler = new CsrfTokenRequestAttributeHandler();
+        requestHandler.setCsrfRequestAttributeName("_csrf");
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .cors(corsCustomizer -> corsCustomizer.configurationSource(new CorsConfigurationSource() {
 
@@ -50,12 +67,21 @@ public class SecurityConfig {
                         config.setAllowedOrigins(List.of("http://localhost:4200"));
                         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                         config.setAllowCredentials(true);
-                        config.setAllowedHeaders(List.of("*"));
+                        config.setAllowedHeaders(List.of(
+                                "Authorization","Content-Type","X-XSRF-TOKEN","X-CSRF-TOKEN","Idempotency-Key"
+                        ));
                         config.setExposedHeaders(List.of("Authorization"));
                         config.setMaxAge(3600L);
                         return config;
                     }
-                })).csrf((csrf) -> csrf.disable())
+                })).csrf(csrf -> csrf
+                        .csrfTokenRepository(repo)
+                        .csrfTokenRequestHandler(requestHandler)
+                        .ignoringRequestMatchers(
+                                "/auth/authenticate",
+                                "/auth/verify-otp"
+                        )
+                )
                 .authorizeHttpRequests((requests) -> requests
 //                        .requestMatchers("**").permitAll())
                         .requestMatchers(HttpMethod.POST, "/transactions/savePliz").hasRole("CLIENT")
@@ -80,10 +106,36 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll())
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .logout(logoutConfigurer -> logoutConfigurer
+                .logout(logout -> logout
                         .logoutUrl("/auth/logout")
                         .addLogoutHandler(logoutHandler)
-                        .logoutSuccessHandler((request, response, authentication) -> SecurityContextHolder.clearContext())
+                        .logoutSuccessHandler((req, res, auth) -> {
+                            ResponseCookie delete = ResponseCookie.from("refresh_token", "")
+                                    .httpOnly(true)
+                                    .secure(false)      // DEV=false (isti kao pri setovanju)
+                                    .sameSite("Strict")
+                                    .path(refreshCookiePath)          // isti path
+                                    .maxAge(0)
+                                    .build();
+                            res.addHeader(HttpHeaders.SET_COOKIE,
+                                    ResponseCookie.from("refresh_token", "")
+                                            .httpOnly(true)
+                                            .secure(false)
+                                            .sameSite("Strict")
+                                            .path("/")
+                                            .maxAge(0)
+                                            .build().toString());
+                            res.addHeader(HttpHeaders.SET_COOKIE,
+                                    ResponseCookie.from("refresh_token", "")
+                                            .httpOnly(true)
+                                            .secure(false)
+                                            .sameSite("Strict")
+                                            .path("/auth")
+                                            .maxAge(0)
+                                            .build().toString());
+                            SecurityContextHolder.clearContext();
+                            res.setStatus(HttpServletResponse.SC_NO_CONTENT);
+                        })
                 );
         return http.build();
     }

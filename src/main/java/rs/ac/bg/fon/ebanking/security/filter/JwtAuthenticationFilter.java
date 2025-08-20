@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,12 +25,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 
     private final JwtService jwtService;
-
-
     private final UserDetailsService userDetailsService;
-
-
-    private final TokenRepository tokenRepository;
 
     @Override
     protected void doFilterInternal(
@@ -38,42 +34,50 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
-        if (request.getServletPath().contains("/api/v1/auth")) {
+        String path = request.getServletPath();
+        if (path.startsWith("/auth")) {
             filterChain.doFilter(request, response);
             return;
         }
-        final String authHeader = request.getHeader("Authorization");
-        System.out.println(authHeader);
-        final String jwt;
-        final String userUsername;
-        if (authHeader == null ||!authHeader.startsWith("Bearer ")) {
+
+        // Čitamo Authorization: Bearer <access>
+        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
-        jwt = authHeader.substring(7);
-        System.out.println(jwt);
-        userUsername = jwtService.extractUsername(jwt);
-        System.out.println("Username je: " + userUsername);
-        if (userUsername != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            System.out.println("Ulazi u if ");
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userUsername);
-            var isTokenValid = tokenRepository.findByToken(jwt)
-                    .map(t -> !t.isExpired() && !t.isRevoked())
-                    .orElse(false);
-            System.out.println("Pronalazi token." + isTokenValid);
-            if (jwtService.isTokenValid(jwt, userDetails) && isTokenValid) {
-                System.out.println("Token je validan.");
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+
+        final String jwt = authHeader.substring(7);
+
+        try {
+            // Ne prihvatamo refresh kao access
+            String typ = jwtService.extractTyp(jwt);
+            if (!"access".equals(typ)) {
+                filterChain.doFilter(request, response);
+                return;
             }
+
+            final String username = jwtService.extractUsername(jwt);
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                // Validacija potpisa + exp + subject
+                if (jwtService.isTokenValid(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            }
+        } catch (Exception ignore) {
+            // Ako je token neispravan / istekao, ne dizati 500 — samo pusti dalje bez autentikacije.
+            // Kontroleri/konfiguracija će vratiti 401 gde je potrebno.
         }
+
         filterChain.doFilter(request, response);
     }
 }

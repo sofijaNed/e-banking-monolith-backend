@@ -31,4 +31,6 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     Optional<Account> findByIdForUpdate(@Param("id") Long id);
 
     Optional<Account> findByAccountNumber(String accountNumber);
+
+    Account findAccountByAccountNumber(String accountNumber);
 }

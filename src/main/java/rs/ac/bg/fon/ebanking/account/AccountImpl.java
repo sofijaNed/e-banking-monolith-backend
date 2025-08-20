@@ -129,4 +129,10 @@ public class AccountImpl implements ServiceInterface<AccountDTO> {
                 })
                 .toList();
     }
+
+    public List<AccountDTO> getByAccountNumber(String accountNumber) {
+        return accountRepository.findByAccountNumber(accountNumber).stream()
+                .map(account -> modelMapper.map(account, AccountDTO.class))
+                .toList();
+    }
 }

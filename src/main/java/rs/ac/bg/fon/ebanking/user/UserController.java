@@ -18,8 +18,8 @@ public class UserController {
         this.userImplementation = userImplementation;
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<UserDTO> login(@PathVariable("id") String username, String password) throws Exception {
-        return ResponseEntity.ok().body(userImplementation.login(username, password));
-    }
+//    @GetMapping("/{id}")
+//    public ResponseEntity<UserDTO> login(@PathVariable("id") String username, String password) throws Exception {
+//        return ResponseEntity.ok().body(userImplementation.login(username, password));
+//    }
 }

@@ -5,7 +5,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,39 +30,49 @@ import rs.ac.bg.fon.ebanking.security.token.TokenType;
 import rs.ac.bg.fon.ebanking.user.Role;
 import rs.ac.bg.fon.ebanking.security.twofactorauth.OtpService;
 import rs.ac.bg.fon.ebanking.client.ClientImpl;
+import jakarta.servlet.http.Cookie;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HexFormat;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
 
-
     private final UserRepository userRepository;
-
-
     private final ClientRepository clientRepository;
-
-
     private final EmployeeRepository employeeRepository;
-
-
     private final TokenRepository tokenRepository;
-
-
     private final PasswordEncoder passwordEncoder;
-
-
     private final JwtService jwtService;
-
-
     private final AuthenticationManager authenticationManager;
     private final ModelMapper modelMapper;
     private final OtpService otpService;
     private final ClientImpl clientImpl;
     private final AuditRepository auditRepository;
 
+
+    @Value("${jwt.refresh-token-ms:604800000}")
+    private long refreshTokenMs;
+
+    @Value("${jwt.refresh-cookie-name:refresh_token}")
+    private String refreshCookieName;
+
+    @Value("${jwt.refresh-cookie-path:/}")
+    private String refreshCookiePath;
+
+    @Value("${jwt.refresh-cookie-secure:false}")
+    private boolean refreshCookieSecure;
+
+    @Value("${jwt.refresh-pepper:pepper-change-me}")
+    private String refreshPepper;
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(),request.getPassword()));
@@ -76,101 +88,76 @@ public class AuthenticationService {
             return AuthenticationResponse.builder()
                     .twoFactorRequired(true)
                     .preAuthToken(preAuthToken)
-                    .message("OTP poslat na email")
+                    .message("OTP sent to email")
                     .build();
         }
-        var jwtToken = jwtService.generateToken(user);
+//        var jwtToken = jwtService.generateToken(user);
+//        var refreshToken = jwtService.generateRefreshToken(user);
+        var accessToken  = jwtService.generateAccessToken(user);
         var refreshToken = jwtService.generateRefreshToken(user);
-        revokeAllMemberTokens(user);
-        saveMemberToken(user,jwtToken);
 
-        Long id;
-        String role;
-        String name = "";
+//        revokeAllMemberTokens(user);
+//        saveMemberToken(user,jwtToken);
 
-        if(user.getRole() == Role.ROLE_CLIENT){
+        revokeAllRefreshTokens(user);
+        saveRefreshHash(user, refreshToken);
 
-            Client client = clientRepository.findClientByUserClientUsername(user.getUsername());
-            id = client.getId();
-            role=Role.ROLE_CLIENT.name();
-            name = client.getFirstname();
 
-        }
-        else {
-            Employee employee = employeeRepository.findEmployeeByUserEmployeeUsername(user.getUsername());
-            id = employee.getId();
-            role = Role.ROLE_EMPLOYEE.name();
-            name = employee.getFirstname();
-        }
+        var idRoleName = resolveIdentityForAudit(user);
 
         Audit audit = new Audit();
         audit.setTableName("users");
-        audit.setRecordId(id);
+        audit.setRecordId(idRoleName.id);
         audit.setAction("LOGIN");
         audit.setChangedAt(Instant.now());
-        audit.setChangedBy(name);
+        audit.setChangedBy(idRoleName.name);
 
         auditRepository.save(audit);
 
         return AuthenticationResponse.builder()
-                .accessToken(jwtToken)
+                .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .username(user.getUsername())
-                .role(role)
+                .role(idRoleName.role)
                 .message("Succesfull logging.")
                 .build();
     }
 
     public Object checkForActiveUser(String token) throws Exception {
-        //String jwt = token.substring(7);
-
         String username = jwtService.extractUsername(token);
-        if(jwtService.isTokenExpired(token)) username = null;
+        if (jwtService.isTokenExpired(token)) username = null;
 
-        if(username != null && !username.contains("employee")){
-
+        if (username != null && !username.contains("employee")) {
             return clientImpl.findByUsername(username);
-
-        }
-        else{
+        } else {
             Employee employee = employeeRepository.findEmployeeByUserEmployeeUsername(username);
             return modelMapper.map(employee, EmployeeDTO.class);
         }
-
     }
 
     public AuthenticationResponse completeAuthentication(User user) {
-        var jwtToken = jwtService.generateToken(user);
+//        var jwtToken = jwtService.generateToken(user);
+//        var refreshToken = jwtService.generateRefreshToken(user);
+        var accessToken  = jwtService.generateAccessToken(user);
         var refreshToken = jwtService.generateRefreshToken(user);
-        revokeAllMemberTokens(user);
-        saveMemberToken(user, jwtToken);
+//        revokeAllMemberTokens(user);
+//        saveMemberToken(user, jwtToken);
 
-        Long id;
-        String role;
-        String name = "";
+        revokeAllRefreshTokens(user);
+        saveRefreshHash(user, refreshToken);
 
-        if (user.getRole() == Role.ROLE_CLIENT) {
-            Client client = clientRepository.findClientByUserClientUsername(user.getUsername());
-            id = client.getId();
-            role = Role.ROLE_CLIENT.name();
-            name = client.getFirstname();
-        } else {
-            Employee employee = employeeRepository.findEmployeeByUserEmployeeUsername(user.getUsername());
-            id = employee.getId();
-            role = Role.ROLE_EMPLOYEE.name();
-            name = employee.getFirstname();
-        }
+        var idRoleName = resolveIdentityForAudit(user);
 
         Audit audit = new Audit();
         audit.setTableName("users");
-        audit.setRecordId(id);
+        audit.setRecordId(idRoleName.id);
         audit.setAction("LOGIN");
         audit.setChangedAt(Instant.now());
-        audit.setChangedBy(name);
+        audit.setChangedBy(idRoleName.name);
         auditRepository.save(audit);
 
         return AuthenticationResponse.builder()
-                .accessToken(jwtToken)
+                .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .username(user.getUsername())
                 .twoFactorRequired(false)
@@ -183,66 +170,166 @@ public class AuthenticationService {
     public void refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("In refresh token method.");
 
-        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        final String refreshToken;
-        final String userUsername;
-
-        // Check for Bearer token in the Authorization header
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return; // No token present
-        }
-
-        refreshToken = authHeader.substring(7); // Extract refresh token
-        userUsername = jwtService.extractUsername(refreshToken);
-
-        if (userUsername == null) {
+        String rawRefresh = readLatestValidRefresh(request);
+        if (rawRefresh == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
-        // If username is present and the token is valid
-        var user = userRepository.findByUsername(userUsername)
+
+        // >>> 2) Provera potpisa/isteka + provera da je baš REFRESH (typ=refresh)
+        String typ = null;
+        try {
+            typ = jwtService.extractTyp(rawRefresh);
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+        if (!"refresh".equals(typ) || jwtService.isTokenExpired(rawRefresh)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
+        String username = jwtService.extractUsername(rawRefresh);
+        var user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        var storedRefreshOpt = tokenRepository.findByToken(refreshToken);
-        if (storedRefreshOpt.isEmpty() || storedRefreshOpt.get().isRevoked() || storedRefreshOpt.get().isExpired()) {
+        // >>> 3) Nađi heš u bazi i ROTIRAJ
+        String refreshHash = sha256(refreshPepper + rawRefresh);
+        var storedOpt = tokenRepository.findByToken(refreshHash); // ista metoda, ali prosleđujemo HEŠ
+        if (storedOpt.isEmpty() || storedOpt.get().isRevoked() || storedOpt.get().isExpired()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
-        // 2) Ensure signature and expiry valid
-        if (!jwtService.isTokenValid(refreshToken, user)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
+        var stored = storedOpt.get();
+        stored.setRevoked(true);
+        stored.setExpired(true);
+        tokenRepository.save(stored);
 
-        var storedRefresh = storedRefreshOpt.get();
-        storedRefresh.setRevoked(true);
-        storedRefresh.setExpired(true);
-        tokenRepository.save(storedRefresh);
+        // >>> 4) Izdaj novi access + novi refresh, sačuvaj NOVI heš i postavi cookie
+        var newAccess  = jwtService.generateAccessToken(user);
+        var newRefresh = jwtService.generateRefreshToken(user);
+        saveRefreshHash(user, newRefresh);
 
-        // 4) Create new access and new refresh token
-        var newAccessToken = jwtService.generateToken(user);
-        var newRefreshToken = jwtService.generateRefreshToken(user);
-
-        saveMemberToken(user, newAccessToken); // access token saved as before
-        // save new refresh token with TokenType.REFRESH (or the same enum if extended)
-        var refreshTokenEntity = Token.builder()
-                .token(newRefreshToken)
-                .user(user)
-                .tokenType(TokenType.BEARER) // ideally REFRESH if you add it
-                .expired(false)
-                .revoked(false)
-                .build();
-        tokenRepository.save(refreshTokenEntity);
+        setRefreshCookie(response, newRefresh); // HttpOnly+Secure cookie
 
         var authResponse = AuthenticationResponse.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
+                .accessToken(newAccess)
+                .message("refreshed")
                 .build();
+
+        response.setStatus(HttpServletResponse.SC_OK);
         new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
     }
 
+    public void revokeAllRefreshTokens(User user) {
+        var tokens = tokenRepository.findAllValidByUserAndType(user.getUsername(), TokenType.REFRESH);
+        if (tokens.isEmpty()) return;
+        tokens.forEach(t -> { t.setExpired(true); t.setRevoked(true); });
+        tokenRepository.saveAll(tokens);
+    }
+
+    public void revokeSingleRefresh(User user, String rawRefreshFromCookie) {
+        String h = sha256(refreshPepper + rawRefreshFromCookie);
+        tokenRepository.findByToken(h).ifPresent(t -> {
+            if (t.getUser().getUsername().equals(user.getUsername())) {
+                t.setExpired(true); t.setRevoked(true);
+                tokenRepository.save(t);
+            }
+        });
+    }
+
+    private void setRefreshCookie(HttpServletResponse response, String rawRefresh) {
+        deleteRefreshCookie(response, "/auth");
+        if (!"/".equals(refreshCookiePath)) {
+            deleteRefreshCookie(response, "/");
+        }
+
+        // 2) Postavi JEDAN ispravan cookie na refreshCookiePath (DEV: Secure=false)
+        ResponseCookie cookie = ResponseCookie.from(refreshCookieName, rawRefresh)
+                .httpOnly(true)
+                .secure(refreshCookieSecure)
+                .sameSite("Strict")
+                .path(refreshCookiePath)       // << "/"
+                .maxAge(Duration.ofMillis(refreshTokenMs))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    private void deleteRefreshCookie(HttpServletResponse response, String path) {
+        ResponseCookie del = ResponseCookie.from(refreshCookieName, "")
+                .httpOnly(true)
+                .secure(refreshCookieSecure)
+                .sameSite("Strict")
+                .path(path)
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, del.toString());
+    }
+
+    private String readCookie(HttpServletRequest req, String name) {
+        Cookie[] cs = Optional.ofNullable(req.getCookies()).orElse(new Cookie[0]);
+        return Arrays.stream(cs).filter(c -> name.equals(c.getName())).map(Cookie::getValue).findFirst().orElse(null);
+    }
+
+    private void saveRefreshHash(User user, String rawRefresh) {
+        var token = Token.builder()
+                .user(user)
+                .token(sha256(refreshPepper + rawRefresh))
+                .tokenType(TokenType.REFRESH)
+                .expired(false)
+                .revoked(false)
+                .build();
+        tokenRepository.save(token);
+    }
+
+    private String sha256(String s) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(md.digest(s.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private static class Identity {
+        Long id; String role; String name;
+        Identity(Long id, String role, String name) { this.id=id; this.role=role; this.name=name; }
+    }
+
+    private Identity resolveIdentityForAudit(User user) {
+        Long id; String role; String name;
+        if (user.getRole() == Role.ROLE_CLIENT) {
+            Client c = clientRepository.findClientByUserClientUsername(user.getUsername());
+            id = c.getId(); role = Role.ROLE_CLIENT.name(); name = c.getFirstname();
+        } else {
+            Employee e = employeeRepository.findEmployeeByUserEmployeeUsername(user.getUsername());
+            id = e.getId(); role = Role.ROLE_EMPLOYEE.name(); name = e.getFirstname();
+        }
+        return new Identity(id, role, name);
+    }
+
+    private String readLatestValidRefresh(HttpServletRequest req) {
+        Cookie[] cs = Optional.ofNullable(req.getCookies()).orElse(new Cookie[0]);
+
+        String best = null;
+        Date bestIat = null;
+
+        for (Cookie c : cs) {
+            if (!refreshCookieName.equals(c.getName())) continue;
+            String val = c.getValue();
+            try {
+                if (!"refresh".equals(jwtService.extractTyp(val))) continue;
+                if (jwtService.isTokenExpired(val)) continue;
+                Date iat = jwtService.extractIssuedAt(val);
+                if (best == null || (iat != null && iat.after(bestIat))) {
+                    best = val;
+                    bestIat = iat;
+                }
+            } catch (Exception ignored) {}
+        }
+        return best;
+    }
 
     public void revokeAllMemberTokens(User user) {
         var validUserTokens = tokenRepository.findAllValidTokenByUser(user.getUsername());

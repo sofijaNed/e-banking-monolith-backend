@@ -15,6 +15,7 @@ import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Service
@@ -30,8 +31,41 @@ public class JwtService {
     @Value("${jwt.refresh-token-ms:604800000}")
     private long refreshTokenMs;
 
+    public String generateAccessToken(UserDetails userDetails){
+        return buildToken(new HashMap<>(), userDetails, accessTokenMs, "access");
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        return buildToken(new HashMap<>(), userDetails, refreshTokenMs, "refresh");
+    }
+
+//    public String generateRefreshToken(UserDetails user, Date originalIat) {
+//        Map<String,Object> claims = new HashMap<>();
+//        claims.put("typ", "refresh");
+//        claims.put("jti", UUID.randomUUID().toString());
+//        claims.put("ori", originalIat.getTime()); // original session start (millis)
+//        return buildToken(claims, user, refreshTokenMs, "refresh");
+//    }
+
     public String extractUsername(String token){
         return extractClaim(token,Claims::getSubject);
+    }
+
+    public String extractTyp(String token) {
+        return extractAllClaims(token).get("typ", String.class);
+    }
+
+    public String extractJti(String token) {
+        return extractAllClaims(token).get("jti", String.class);
+    }
+
+    public Date extractIssuedAt(String token) {
+        return extractClaim(token, Claims::getIssuedAt);
+    }
+
+    public Date extractOriginalIat(String token) {
+        Object v = extractAllClaims(token).get("ori");
+        return (v instanceof Number) ? new Date(((Number)v).longValue()) : null;
     }
 
 
@@ -41,29 +75,41 @@ public class JwtService {
     }
 
 
+//    public String generateToken(UserDetails userDetails){
+//        return generateToken(new HashMap<>(),userDetails);
+//    }
+
+    @Deprecated
     public String generateToken(UserDetails userDetails){
-        return generateToken(new HashMap<>(),userDetails);
+        return generateAccessToken(userDetails);
     }
 
-
-
-    public String generateToken(Map<String,Object> extractClaims, UserDetails userDetails){
-        return buildToken(extractClaims,userDetails,accessTokenMs);
+    @Deprecated
+    public String generateToken(Map<String,Object> extraClaims, UserDetails userDetails){
+        return buildToken(extraClaims, userDetails, accessTokenMs, "access");
     }
 
+//    public String generateToken(Map<String,Object> extractClaims, UserDetails userDetails){
+//        return buildToken(extractClaims,userDetails,accessTokenMs);
+//    }
+//
+//
+//    public String generateRefreshToken(UserDetails userDetails) {
+//        return buildToken(new HashMap<>(), userDetails, refreshTokenMs);
+//    }
 
-    public String generateRefreshToken(UserDetails userDetails) {
-        return buildToken(new HashMap<>(), userDetails, refreshTokenMs);
-    }
 
+    private String buildToken(Map<String,Object> extraClaims, UserDetails userDetails, long expiration, String typ){
+        Map<String,Object> claims = new HashMap<>(extraClaims);
+        claims.put("typ", typ);
+        claims.put("jti", UUID.randomUUID().toString());
 
-    private String buildToken(Map<String,Object> extraClaims,UserDetails userDetails,long expiration){
-        return Jwts
-                .builder()
-                .setClaims(extraClaims)
+        long now = System.currentTimeMillis();
+        return Jwts.builder()
+                .setClaims(claims)
                 .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .setIssuedAt(new Date(now))
+                .setExpiration(new Date(now + expiration))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
