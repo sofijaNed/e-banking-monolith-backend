@@ -74,6 +74,12 @@ public class AuthenticationService {
     @Value("${jwt.refresh-pepper:pepper-change-me}")
     private String refreshPepper;
 
+    @Value("${jwt.idle-max-ms:900000}")
+    private long idleMaxMs;
+
+    @Value("${jwt.absolute-max-ms:28800000}")
+    private long absoluteMaxMs;
+
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(),request.getPassword()));
 
@@ -93,8 +99,9 @@ public class AuthenticationService {
         }
 //        var jwtToken = jwtService.generateToken(user);
 //        var refreshToken = jwtService.generateRefreshToken(user);
+        var now = new Date();
         var accessToken  = jwtService.generateAccessToken(user);
-        var refreshToken = jwtService.generateRefreshToken(user);
+        var refreshToken = jwtService.generateRefreshToken(user, now);
 
 //        revokeAllMemberTokens(user);
 //        saveMemberToken(user,jwtToken);
@@ -138,8 +145,9 @@ public class AuthenticationService {
     public AuthenticationResponse completeAuthentication(User user) {
 //        var jwtToken = jwtService.generateToken(user);
 //        var refreshToken = jwtService.generateRefreshToken(user);
+        var now = new Date();
         var accessToken  = jwtService.generateAccessToken(user);
-        var refreshToken = jwtService.generateRefreshToken(user);
+        var refreshToken = jwtService.generateRefreshToken(user, now);
 //        revokeAllMemberTokens(user);
 //        saveMemberToken(user, jwtToken);
 
@@ -189,6 +197,12 @@ public class AuthenticationService {
             return;
         }
 
+        long now = System.currentTimeMillis();
+        Date iat = jwtService.extractIssuedAt(rawRefresh);
+        Date ori = jwtService.extractOriginalIat(rawRefresh);
+        if (iat == null || now - iat.getTime() > idleMaxMs)      { response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); return; }
+        if (ori == null || now - ori.getTime() > absoluteMaxMs)  { response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); return; }
+
         String username = jwtService.extractUsername(rawRefresh);
         var user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -208,8 +222,9 @@ public class AuthenticationService {
 
         // >>> 4) Izdaj novi access + novi refresh, sačuvaj NOVI heš i postavi cookie
         var newAccess  = jwtService.generateAccessToken(user);
-        var newRefresh = jwtService.generateRefreshToken(user);
+        var newRefresh = jwtService.generateRefreshToken(user, ori);
         saveRefreshHash(user, newRefresh);
+
 
         setRefreshCookie(response, newRefresh); // HttpOnly+Secure cookie
 
@@ -220,6 +235,10 @@ public class AuthenticationService {
 
         response.setStatus(HttpServletResponse.SC_OK);
         new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
+    }
+
+    private String safeExtractTyp(String token) {
+        try { return jwtService.extractTyp(token); } catch (Exception e) { return null; }
     }
 
     public void revokeAllRefreshTokens(User user) {

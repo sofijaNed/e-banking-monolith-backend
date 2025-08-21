@@ -36,16 +36,17 @@ public class JwtService {
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
-        return buildToken(new HashMap<>(), userDetails, refreshTokenMs, "refresh");
+        return generateRefreshToken(userDetails, new Date());
+
     }
 
-//    public String generateRefreshToken(UserDetails user, Date originalIat) {
-//        Map<String,Object> claims = new HashMap<>();
-//        claims.put("typ", "refresh");
-//        claims.put("jti", UUID.randomUUID().toString());
-//        claims.put("ori", originalIat.getTime()); // original session start (millis)
-//        return buildToken(claims, user, refreshTokenMs, "refresh");
-//    }
+    public String generateRefreshToken(UserDetails user, Date originalIat) {
+        Map<String,Object> claims = new HashMap<>();
+        claims.put("typ", "refresh");
+        claims.put("jti", UUID.randomUUID().toString());
+        claims.put("ori", originalIat.getTime()); // original session start (millis)
+        return buildToken(claims, user, refreshTokenMs, "refresh");
+    }
 
     public String extractUsername(String token){
         return extractClaim(token,Claims::getSubject);
