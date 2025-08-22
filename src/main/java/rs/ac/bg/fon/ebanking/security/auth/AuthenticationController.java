@@ -50,8 +50,7 @@ public class AuthenticationController {
         ResponseCookie cookie = ResponseCookie.from(refreshCookieName, rawRefresh)
                 .httpOnly(true)
                 .secure(refreshCookieSecure)
-                .secure(true)
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .path(refreshCookiePath)
                 .maxAge(Duration.ofMillis(refreshTokenMs))
                 .build();

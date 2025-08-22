@@ -279,7 +279,7 @@ public class AuthenticationService {
         ResponseCookie del = ResponseCookie.from(refreshCookieName, "")
                 .httpOnly(true)
                 .secure(refreshCookieSecure)
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .path(path)
                 .maxAge(0)
                 .build();
