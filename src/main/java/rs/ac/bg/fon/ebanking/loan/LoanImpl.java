@@ -3,7 +3,10 @@ package rs.ac.bg.fon.ebanking.loan;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import rs.ac.bg.fon.ebanking.account.Account;
 import rs.ac.bg.fon.ebanking.account.AccountRepository;
 import rs.ac.bg.fon.ebanking.client.ClientRepository;
@@ -21,6 +24,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class LoanImpl implements ServiceInterface<LoanDTO> {
@@ -238,5 +242,29 @@ public class LoanImpl implements ServiceInterface<LoanDTO> {
     @Override
     public LoanDTO update(LoanDTO loanDTO) throws Exception {
         return null;
+    }
+
+    public List<LoanDTO> findMine() {
+        return loanRepository.findMine().stream()
+                .map(l -> modelMapper.map(l, LoanDTO.class)).toList();
+    }
+
+    public List<LoanDTO> findMineByStatus(String status) {
+        String u = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // ako koristiš ENUM u entitetu:
+        LoanStatus target;
+        try {
+            target = LoanStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid loan status: " + status);
+        }
+
+        return loanRepository.findByAccountClientUserClientUsernameAndStatus(u, target)
+                .stream().map(l -> modelMapper.map(l, LoanDTO.class)).toList();
+
+        // Ako je status u entitetu String:
+        // return loanRepository.findByAccountClientUserClientUsernameAndStatus(u, status.trim().toUpperCase(Locale.ROOT))
+        //        .stream().map(l -> modelMapper.map(l, LoanDTO.class)).toList();
     }
 }

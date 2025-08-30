@@ -33,4 +33,26 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     Optional<Account> findByAccountNumber(String accountNumber);
 
     Account findAccountByAccountNumber(String accountNumber);
+
+    //for pre authorize metode
+    boolean existsByIdAndClientUserClientUsername(Long id, String username);
+
+    boolean existsByAccountNumberAndClientUserClientUsername(String accountNumber, String username);
+
+    List<Account> findByClientUserClientUsername(String username);
+
+    @Query("select a from Account a where a.client.userClient.username = ?#{authentication.name}")
+    List<Account> findMine();
+
+    @Query("""
+    select (count(a) > 0) from Account a
+    where a.id = :id and a.client.userClient.username = :u
+  """)
+    boolean ownedByUsername(@Param("id") Long accountId, @Param("u") String username);
+
+    @Query("""
+    select (count(a) > 0) from Account a
+    where a.accountNumber = :acc and a.client.userClient.username = :u
+  """)
+    boolean numberOwnedByUsername(@Param("acc") String accountNumber, @Param("u") String username);
 }

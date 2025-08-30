@@ -8,4 +8,5 @@ import rs.ac.bg.fon.ebanking.user.User;
 public interface ClientRepository extends JpaRepository<Client, Long> {
     Client findClientByUserClient(User user);
     Client findClientByUserClientUsername(String username);
+    boolean existsByIdAndUserClientUsername(Long id, String username);
 }

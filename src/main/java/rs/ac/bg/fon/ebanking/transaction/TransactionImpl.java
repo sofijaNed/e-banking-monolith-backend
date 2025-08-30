@@ -3,6 +3,9 @@ package rs.ac.bg.fon.ebanking.transaction;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import rs.ac.bg.fon.ebanking.account.Account;
 import rs.ac.bg.fon.ebanking.audit.Audit;
@@ -53,6 +56,14 @@ public class TransactionImpl implements ServiceInterface<TransactionDTO> {
     @Override
     public TransactionDTO save(TransactionDTO dto) throws Exception {
         validateTransactionDTO(dto);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isEmployee = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_EMPLOYEE".equals(a.getAuthority()));
+        if (!isEmployee &&
+                !accountRepository.existsByAccountNumberAndClientUserClientUsername(dto.getSender(), auth.getName())) {
+            throw new AccessDeniedException("Not allowed to send from this account");
+        }
 
         Account sender = accountRepository.findByAccountNumber(dto.getSender())
                 .orElseThrow(() -> new IllegalArgumentException("Sender account not found"));
@@ -152,5 +163,10 @@ public class TransactionImpl implements ServiceInterface<TransactionDTO> {
             dto.setReceiver(transaction.getReceiver().getAccountNumber());
         }
         return dto;
+    }
+
+    public List<TransactionDTO> findMine() {
+        return transactionRepository.findVisibleToMe()
+                .stream().map(this::mapToDTO).toList();
     }
 }

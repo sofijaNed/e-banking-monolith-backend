@@ -85,12 +85,10 @@ public class SecurityConfig {
                         )
                 )
                 .authorizeHttpRequests((requests) -> requests
-//                        .requestMatchers("**").permitAll())
                         .requestMatchers(HttpMethod.POST, "/transactions/savePliz").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.GET, "/transactions/sender/{id}").hasAnyRole("CLIENT", "EMPLOYEE")
                         .requestMatchers(HttpMethod.GET, "/transactions/receiver/{id}").hasAnyRole("CLIENT", "EMPLOYEE")
                         .requestMatchers(HttpMethod.GET, "/transactions/{id}").hasAnyRole("CLIENT", "EMPLOYEE")
-//                        .requestMatchers(HttpMethod.POST, "/accounts/**", "/clients/**", "/loans/**").hasAnyRole("CLIENT", "EMPLOYEE")
                         .requestMatchers(HttpMethod.GET, "/accounts/{id}").hasAnyRole("CLIENT", "EMPLOYEE")
                         .requestMatchers(HttpMethod.GET, "/accounts/clients/{id}").hasAnyRole("CLIENT", "EMPLOYEE")
                         .requestMatchers(HttpMethod.GET, "/clients").hasRole("EMPLOYEE")

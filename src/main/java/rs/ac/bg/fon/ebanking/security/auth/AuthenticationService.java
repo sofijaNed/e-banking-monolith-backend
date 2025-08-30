@@ -184,7 +184,6 @@ public class AuthenticationService {
             return;
         }
 
-        // >>> 2) Provera potpisa/isteka + provera da je baš REFRESH (typ=refresh)
         String typ = null;
         try {
             typ = jwtService.extractTyp(rawRefresh);

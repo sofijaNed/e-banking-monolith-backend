@@ -3,6 +3,7 @@ package rs.ac.bg.fon.ebanking.account;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import rs.ac.bg.fon.ebanking.client.ClientDTO;
 import rs.ac.bg.fon.ebanking.client.Client;
@@ -134,5 +135,11 @@ public class AccountImpl implements ServiceInterface<AccountDTO> {
         return accountRepository.findByAccountNumber(accountNumber).stream()
                 .map(account -> modelMapper.map(account, AccountDTO.class))
                 .toList();
+    }
+
+    public List<AccountDTO> findMine() {
+        String u = SecurityContextHolder.getContext().getAuthentication().getName();
+        return accountRepository.findByClientUserClientUsername(u)
+                .stream().map(a -> modelMapper.map(a, AccountDTO.class)).toList();
     }
 }

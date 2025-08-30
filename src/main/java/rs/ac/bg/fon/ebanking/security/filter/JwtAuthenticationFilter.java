@@ -74,8 +74,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception ignore) {
-            // Ako je token neispravan / istekao, ne dizati 500 — samo pusti dalje bez autentikacije.
-            // Kontroleri/konfiguracija će vratiti 401 gde je potrebno.
         }
 
         filterChain.doFilter(request, response);

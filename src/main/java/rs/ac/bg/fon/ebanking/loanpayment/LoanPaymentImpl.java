@@ -70,4 +70,9 @@ public class LoanPaymentImpl {
                 })
                 .toList();
     }
+
+    public List<LoanPaymentDTO> findMine() {
+        return loanPaymentRepository.findMine().stream()
+                .map(lp -> modelMapper.map(lp, LoanPaymentDTO.class)).toList();
+    }
 }
