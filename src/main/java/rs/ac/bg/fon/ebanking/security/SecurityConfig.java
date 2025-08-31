@@ -23,6 +23,7 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import rs.ac.bg.fon.ebanking.security.filter.JwtAuthenticationFilter;
+import rs.ac.bg.fon.ebanking.security.ratelimit.RateLimitFilter;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -49,7 +50,7 @@ public class SecurityConfig {
 
 
     @Bean
-    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter) throws Exception {
         var repo = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repo.setCookieName("XSRF-TOKEN");
         repo.setHeaderName("X-XSRF-TOKEN");
@@ -72,7 +73,8 @@ public class SecurityConfig {
                         config.setAllowedHeaders(List.of(
                                 "Authorization","Content-Type","X-XSRF-TOKEN","X-CSRF-TOKEN","Idempotency-Key"
                         ));
-                        config.setExposedHeaders(List.of("Authorization"));
+                        config.setExposedHeaders(List.of("Authorization",
+                                "RateLimit-Limit","RateLimit-Remaining","RateLimit-Reset","Retry-After"));
                         config.setMaxAge(3600L);
                         return config;
                     }
@@ -106,6 +108,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll())
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .logout(logout -> logout
                         .logoutUrl("/auth/logout")
                         .addLogoutHandler(logoutHandler)
