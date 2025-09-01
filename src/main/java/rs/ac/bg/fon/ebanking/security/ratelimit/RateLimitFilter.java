@@ -23,7 +23,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RateLimitProperties props;
 
-    // stabilno čuvamo kante po ključu (ruta + identitet)
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
     @Override
@@ -34,7 +33,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        // limitiramo samo rute koje nas zanimaju
         if (HttpMethod.POST.matches(method) && path.startsWith("/auth/authenticate")) return false;
         if (HttpMethod.POST.matches(method) && path.startsWith("/auth/refresh")) return false;
         if (HttpMethod.POST.matches(method) && path.startsWith("/transactions")) return false;

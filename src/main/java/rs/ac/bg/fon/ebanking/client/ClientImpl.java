@@ -63,7 +63,7 @@ public class ClientImpl implements ServiceInterface<ClientDTO> {
     @Override
     public ClientDTO save(ClientDTO clientDTO) throws Exception {
         if (clientDTO == null) {
-            throw new NullPointerException("Klijent ne može biti null");
+            throw new NullPointerException("Client cannot be null");
         }
         Client saved = clientRepository.save(modelMapper.map(clientDTO, Client.class));
         return modelMapper.map(saved, ClientDTO.class);

@@ -150,7 +150,7 @@ public class JwtService {
     public String generatePreAuthToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("username", user.getUsername());
-        claims.put("2fa", true); // flag da je ovo 2FA token
+        claims.put("2fa", true);
         claims.put("purpose", "LOGIN_2FA");
 
         long expirationMillis = 3 * 60 * 1000;

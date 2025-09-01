@@ -31,12 +31,11 @@ public class AuditEntityListener {
     @PostUpdate
     public void afterUpdate(Object entity) {
         Long recordId = extractId(entity);
-        // Napomena: za before/after treba hvatati stari state iz @PreUpdate
         auditService.record(
                 entity.getClass().getSimpleName(),
                 recordId,
                 "UPDATE",
-                null, // ovde možeš kasnije dodati pre-update stanje
+                null,
                 entity
         );
     }

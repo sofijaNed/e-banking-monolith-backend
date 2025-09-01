@@ -206,7 +206,6 @@ public class AuthenticationService {
         var user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        // >>> 3) Nađi heš u bazi i ROTIRAJ
         String refreshHash = sha256(refreshPepper + rawRefresh);
         var storedOpt = tokenRepository.findByToken(refreshHash); // ista metoda, ali prosleđujemo HEŠ
         if (storedOpt.isEmpty() || storedOpt.get().isRevoked() || storedOpt.get().isExpired()) {
@@ -219,7 +218,6 @@ public class AuthenticationService {
         stored.setExpired(true);
         tokenRepository.save(stored);
 
-        // >>> 4) Izdaj novi access + novi refresh, sačuvaj NOVI heš i postavi cookie
         var newAccess  = jwtService.generateAccessToken(user);
         var newRefresh = jwtService.generateRefreshToken(user, ori);
         saveRefreshHash(user, newRefresh);
@@ -263,7 +261,6 @@ public class AuthenticationService {
             deleteRefreshCookie(response, "/");
         }
 
-        // 2) Postavi JEDAN ispravan cookie na refreshCookiePath (DEV: Secure=false)
         ResponseCookie cookie = ResponseCookie.from(refreshCookieName, rawRefresh)
                 .httpOnly(true)
                 .secure(refreshCookieSecure)

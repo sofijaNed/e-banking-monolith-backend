@@ -34,7 +34,6 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     Account findAccountByAccountNumber(String accountNumber);
 
-    //for pre authorize metode
     boolean existsByIdAndClientUserClientUsername(Long id, String username);
 
     boolean existsByAccountNumberAndClientUserClientUsername(String accountNumber, String username);

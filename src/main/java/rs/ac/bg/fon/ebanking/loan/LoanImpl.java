@@ -252,7 +252,6 @@ public class LoanImpl implements ServiceInterface<LoanDTO> {
     public List<LoanDTO> findMineByStatus(String status) {
         String u = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        // ako koristiš ENUM u entitetu:
         LoanStatus target;
         try {
             target = LoanStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
@@ -263,7 +262,6 @@ public class LoanImpl implements ServiceInterface<LoanDTO> {
         return loanRepository.findByAccountClientUserClientUsernameAndStatus(u, target)
                 .stream().map(l -> modelMapper.map(l, LoanDTO.class)).toList();
 
-        // Ako je status u entitetu String:
         // return loanRepository.findByAccountClientUserClientUsernameAndStatus(u, status.trim().toUpperCase(Locale.ROOT))
         //        .stream().map(l -> modelMapper.map(l, LoanDTO.class)).toList();
     }

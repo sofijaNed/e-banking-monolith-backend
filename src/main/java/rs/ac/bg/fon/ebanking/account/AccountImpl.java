@@ -86,11 +86,11 @@ public class AccountImpl implements ServiceInterface<AccountDTO> {
     @Override
     public AccountDTO update(AccountDTO accountDTO) throws Exception {
         if (accountDTO.getId() == null) {
-            throw new IllegalArgumentException("ID je obavezan za update");
+            throw new IllegalArgumentException("ID is required for update");
         }
         Optional<Account> existingOpt = accountRepository.findById(accountDTO.getId());
         if (existingOpt.isEmpty()) {
-            throw new IllegalArgumentException("Nalog ne postoji");
+            throw new IllegalArgumentException("Account does not exist");
         }
 
         Account existing = existingOpt.get();
@@ -99,7 +99,7 @@ public class AccountImpl implements ServiceInterface<AccountDTO> {
         if (accountDTO.getClient() != null) {
             ClientDTO clientDTO = clientImpl.findById(accountDTO.getClient());
             if (clientDTO == null) {
-                throw new IllegalArgumentException("Klijent ne postoji za ID: " + accountDTO.getClient());
+                throw new IllegalArgumentException("Client does not exist for ID: " + accountDTO.getClient());
             }
             existing.setClient(modelMapper.map(clientDTO, Client.class));
         }

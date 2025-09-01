@@ -117,7 +117,6 @@ public class AuthenticationController {
 
         if (!Boolean.TRUE.equals(auth.isTwoFactorRequired()) && auth.getRefreshToken() != null) {
             setRefreshCookie(response, auth.getRefreshToken());
-            // Opcionalno: iz odgovora ukloni refresh (preporuka kada front pređe na cookie)
             auth = AuthenticationResponse.builder()
                     .accessToken(auth.getAccessToken())
                     .username(auth.getUsername())
@@ -148,7 +147,6 @@ public class AuthenticationController {
         User user = userRepository.findByUsername(username).orElseThrow();
 
         AuthenticationResponse auth = authenticationService.completeAuthentication(user);
-        // Posle uspešnog OTP-a — postavi refresh cookie, a iz body-ja skloni refresh (opciono)
         if (auth.getRefreshToken() != null) {
             setRefreshCookie(response, auth.getRefreshToken());
             auth = AuthenticationResponse.builder()

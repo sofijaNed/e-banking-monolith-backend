@@ -36,12 +36,10 @@ public class LogoutService implements LogoutHandler {
     @Transactional
     public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
         try {
-            String rawRefresh = pickLatestValidRefresh(request); // << umesto readCookie
+            String rawRefresh = pickLatestValidRefresh(request);
             if (rawRefresh != null) {
-                // heš = sha256(pepper + raw)
                 String hash = sha256(refreshPepper + rawRefresh);
                 tokenRepository.findByToken(hash).ifPresent(t -> {
-                    // dozvoli i null->REFRESH (stari unosi), ali ne diraj ACCESS ako ga imaš u istoj tabeli
                     if (t.getTokenType() == null || t.getTokenType() == TokenType.REFRESH) {
                         t.setRevoked(true);
                         t.setExpired(true);
@@ -50,13 +48,11 @@ public class LogoutService implements LogoutHandler {
                 });
             }
         } catch (Exception ignore) {
-            // logout treba da bude idempotentan i "najbolji trud" — ne dižemo 500
         } finally {
             SecurityContextHolder.clearContext();
         }
     }
 
-    /** Uzmi NAJSKORIJI validni refresh token iz svih kolačića: typ=refresh, neistekao, najveći iat. */
     private String pickLatestValidRefresh(HttpServletRequest req) {
         Cookie[] cs = Optional.ofNullable(req.getCookies()).orElse(new Cookie[0]);
         return Stream.of(cs)
@@ -65,7 +61,6 @@ public class LogoutService implements LogoutHandler {
                 .filter(Objects::nonNull)
                 .map(val -> {
                     try {
-                        // prihvati samo REFRESH, i samo ako nije istekao
                         String typ = jwtService.extractTyp(val);
                         if (!"refresh".equals(typ) || jwtService.isTokenExpired(val)) return null;
                         Date iat = jwtService.extractIssuedAt(val);
