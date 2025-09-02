@@ -14,21 +14,29 @@ public class LoanPaymentController {
     @Autowired
     private LoanPaymentImpl loanPaymentService;
 
-    @PreAuthorize("hasRole('EMPLOYEE') or @loanPaymentRepository.existsByIdAndLoanAccountClientUserClientUsername(#paymentId, authentication.name)")
-    @PostMapping("/{paymentId}/pay")
+    @PreAuthorize(
+            "hasRole('EMPLOYEE') or " +
+                    "@loanPaymentRepository.existsByIdLoanIdAndIdInstallmentNoAndLoanAccountClientUserClientUsername(" +
+                    "#loanId, #installmentNo, authentication.name)"
+    )
+    @PostMapping("/loans/{loanId}/installments/{installmentNo}/pay")
     public ResponseEntity<String> payInstallment(
-            @PathVariable Long paymentId,
+            @PathVariable Long loanId,
+            @PathVariable Integer installmentNo,
             @RequestParam Long clientAccountId) {
         try {
-            loanPaymentService.payInstallment(paymentId, clientAccountId);
+            loanPaymentService.payInstallment(loanId, installmentNo, clientAccountId);
             return ResponseEntity.ok("Installment paid successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    @PreAuthorize("hasRole('EMPLOYEE') or @loanRepository.existsByIdAndAccountClientUserClientUsername(#loanId, authentication.name)")
-    @GetMapping("/loan/{loanId}")
+    @PreAuthorize(
+            "hasRole('EMPLOYEE') or " +
+                    "@loanRepository.existsByIdAndAccountClientUserClientUsername(#loanId, authentication.name)"
+    )
+    @GetMapping("/loans/{loanId}")
     public ResponseEntity<List<LoanPaymentDTO>> getPaymentsByLoanId(@PathVariable Long loanId) {
         return ResponseEntity.ok(loanPaymentService.findByLoanId(loanId));
     }

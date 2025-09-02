@@ -12,7 +12,9 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name="loan")
@@ -68,6 +70,6 @@ public class Loan extends Auditable implements Serializable {
     @Column(name = "approved_at")
     private LocalDate approvedAt;
 
-    @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<LoanPayment> payments = new ArrayList<>();
+    @OneToMany(mappedBy="loan", cascade=CascadeType.ALL, orphanRemoval=true)
+    private Set<LoanPayment> payments = new HashSet<>();
 }

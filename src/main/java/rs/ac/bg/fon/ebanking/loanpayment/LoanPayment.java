@@ -20,12 +20,12 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = false)
 public class LoanPayment extends Auditable implements Serializable {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @EmbeddedId
+    private LoanPaymentId id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "loan_id", nullable = false)
+    @MapsId("loanId")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "loan_id", nullable = false, updatable = false)
     private Loan loan;
 
     @Column(name = "due_date")

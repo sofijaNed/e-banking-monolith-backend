@@ -20,4 +20,5 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     List<Loan> findMineByStatus(@Param("status") String status);
     List<Loan> findByAccountClientUserClientUsernameAndStatus(String username, LoanStatus status);
 
+
 }

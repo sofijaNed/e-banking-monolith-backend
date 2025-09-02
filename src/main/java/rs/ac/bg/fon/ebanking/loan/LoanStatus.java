@@ -1,5 +1,5 @@
 package rs.ac.bg.fon.ebanking.loan;
 
 public enum LoanStatus {
-    PENDING, APPROVED, REJECTED, DISBURSED
+    PENDING, APPROVED, REJECTED, DISBURSED, PAID_OFF
 }

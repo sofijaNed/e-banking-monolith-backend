@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 import rs.ac.bg.fon.ebanking.account.Account;
 import rs.ac.bg.fon.ebanking.account.AccountRepository;
 import rs.ac.bg.fon.ebanking.client.ClientRepository;
+import rs.ac.bg.fon.ebanking.loanpayment.LoanPaymentId;
 import rs.ac.bg.fon.ebanking.loanpayment.LoanPaymentRepository;
 import rs.ac.bg.fon.ebanking.transaction.TransactionDTO;
 import rs.ac.bg.fon.ebanking.employee.Employee;
@@ -123,11 +124,17 @@ public class LoanImpl implements ServiceInterface<LoanDTO> {
             BigDecimal principalAmount = monthlyPayment.subtract(interestAmount)
                     .setScale(2, RoundingMode.HALF_UP);
 
+            if (i == months) {
+                principalAmount = remainingPrincipal;
+            }
+
             remainingPrincipal = remainingPrincipal.subtract(principalAmount)
-                    .setScale(2, RoundingMode.HALF_UP);
+                    .max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+
 
             LoanPayment lp = new LoanPayment();
             lp.setLoan(savedLoan);
+            lp.setId(new LoanPaymentId(savedLoan.getId(), i));
             lp.setDueDate(LocalDate.now().plusMonths(i));
             lp.setAmount(monthlyPayment);
             lp.setCurrency(loan.getCurrency());
@@ -156,6 +163,9 @@ public class LoanImpl implements ServiceInterface<LoanDTO> {
         transactionRepository.save(t);
 
         accountRepository.deposit(clientAccount.getId(), loan.getPrincipalAmount());
+
+        savedLoan.setStatus(LoanStatus.DISBURSED);
+        loanRepository.save(savedLoan);
 
         return mapToResponse(savedLoan);
     }
@@ -202,6 +212,7 @@ public class LoanImpl implements ServiceInterface<LoanDTO> {
                     dto.setTermMonths(loan.getTermMonths());
                     dto.setCurrency(loan.getCurrency());
                     dto.setNote(loan.getNote());
+                    dto.setStatus(loan.getStatus().name());
                     dto.setDateIssued(loan.getDateIssued());
                     dto.setMonthlyPayment(loan.getMonthlyPayment());
                     dto.setOutstandingBalance(loan.getOutstandingBalance());
@@ -223,6 +234,7 @@ public class LoanImpl implements ServiceInterface<LoanDTO> {
                     dto.setTermMonths(loan.getTermMonths());
                     dto.setCurrency(loan.getCurrency());
                     dto.setNote(loan.getNote());
+                    dto.setStatus(loan.getStatus().name());
                     dto.setDateIssued(loan.getDateIssued());
                     dto.setMonthlyPayment(loan.getMonthlyPayment());
                     dto.setOutstandingBalance(loan.getOutstandingBalance());

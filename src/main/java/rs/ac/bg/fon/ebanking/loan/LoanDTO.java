@@ -43,6 +43,9 @@ public class LoanDTO {
     @DecimalMin(value = "0.00", inclusive = true, message = "Outstanding balance cannot be negative")
     private BigDecimal outstandingBalance;
 
+    @Pattern(regexp = "PENDING|APPROVED|REJECTED|DISBURSED|PAID_OFF", message = "Status must be PENDING, APPROVED, REJECTED, DISBURSED or PAID_OFF")
+    private String status;
+
     @NotNull(message = "Account ID is required")
     private Long account;
 
