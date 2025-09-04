@@ -100,6 +100,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/employees/byUser/{username}").hasRole("EMPLOYEE")
                         .requestMatchers(HttpMethod.POST, "/loans/client/{clientId}/request").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.PUT, "/loans/{loanId}/approve").hasRole("EMPLOYEE")
+                        .requestMatchers(HttpMethod.PUT, "/loans/{loanId}/reject").hasRole("EMPLOYEE")
                         .requestMatchers(HttpMethod.GET, "/loans/client/{clientId}").hasAnyRole("CLIENT","EMPLOYEE")
                         .requestMatchers(HttpMethod.GET, "/loans/status/{status}").hasAnyRole("CLIENT","EMPLOYEE")
                         .requestMatchers(HttpMethod.GET, "/loan-payments/loans/{loanId}").hasAnyRole("CLIENT","EMPLOYEE")

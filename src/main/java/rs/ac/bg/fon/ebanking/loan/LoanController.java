@@ -40,6 +40,16 @@ public class LoanController {
     }
 
     @PreAuthorize("hasRole('EMPLOYEE')")
+    @PutMapping("/{loanId}/reject")
+    public ResponseEntity<LoanResponseDTO> rejectLoan(
+            @PathVariable Long loanId,
+            @RequestParam Long employeeId,
+            @RequestParam String note
+    ) {
+        return ResponseEntity.ok(loanService.rejectLoan(loanId, employeeId, note));
+    }
+
+    @PreAuthorize("hasRole('EMPLOYEE')")
     @GetMapping
     public ResponseEntity<List<LoanDTO>> getAllLoans() {
         return ResponseEntity.ok(loanService.findAll());
