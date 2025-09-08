@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface UserOtpRepository extends JpaRepository<UserOtp, Long> {
     Optional<UserOtp> findTopByUserUsernameAndPurposeOrderByCreatedAtDesc(String username, String purpose);
     List<UserOtp> findByUserUsernameAndUsedFalseAndExpiresAtAfter(String username, LocalDateTime now);
+    Optional<UserOtp> findFirstByPurposeAndTicketIdAndUsedFalseAndExpiresAtAfter(String purpose, String ticketId, LocalDateTime now);
 }

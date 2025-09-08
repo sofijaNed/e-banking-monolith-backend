@@ -46,6 +46,12 @@ public class Client extends Auditable implements Serializable {
     @Column(name = "address")
     private String address;
 
+    @Column(name = "jmbg", nullable = false, length = 13, unique = true)
+    private String jmbg;
+
+    @Column(name = "id_card_no", length = 20)
+    private String idCardNo;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "username", referencedColumnName = "username")
     @JsonIgnore

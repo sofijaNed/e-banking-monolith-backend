@@ -19,7 +19,7 @@ public class UserOtp {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "username", referencedColumnName = "username")
     @JsonIgnore
     private User user;
@@ -29,5 +29,21 @@ public class UserOtp {
     private LocalDateTime createdAt;
     private boolean used;
     private int attempts;
+    @Column(name = "purpose", length = 50, nullable = false)
     private String purpose;
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "client_id")
+    private Long clientId;
+
+    @Column(name = "ticket_id", length = 64)
+    private String ticketId;
+
+    @Column(name = "reserved_username", length = 50)
+    private String reservedUsername;
+
+    @Column(name = "password_hash", length = 255)
+    private String passwordHash;
+
 }

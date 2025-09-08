@@ -1,5 +1,6 @@
 package rs.ac.bg.fon.ebanking.client;
 
+import jakarta.persistence.Column;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -30,6 +31,10 @@ public class ClientDTO {
     private String phone;
 
     private String address;
+
+    private String jmbg;
+
+    private String idCardNo;
 
     @NotBlank(message = "Username is required")
     @Size(min = 4, max = 50, message = "Username must be between 4 and 50 characters")

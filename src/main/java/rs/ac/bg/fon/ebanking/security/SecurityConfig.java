@@ -83,7 +83,9 @@ public class SecurityConfig {
                         .csrfTokenRequestHandler(requestHandler)
                         .ignoringRequestMatchers(
                                 "/auth/authenticate",
-                                "/auth/verify-otp"
+                                "/auth/verify-otp",
+                                "/auth/register/request",
+                                "/auth/register/verify"
                         )
                 )
                 .authorizeHttpRequests((requests) -> requests
