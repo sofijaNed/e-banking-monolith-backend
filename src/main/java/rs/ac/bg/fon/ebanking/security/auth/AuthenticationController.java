@@ -112,7 +112,7 @@ public class AuthenticationController {
     public ResponseEntity<AuthenticationResponse> authentication(
             @Valid @RequestBody AuthenticationRequest request,
             HttpServletResponse response
-    ) {
+    ) throws Exception {
         AuthenticationResponse auth = authenticationService.authenticate(request);
 
         if (!Boolean.TRUE.equals(auth.isTwoFactorRequired()) && auth.getRefreshToken() != null) {
@@ -142,7 +142,7 @@ public class AuthenticationController {
     ) {
         String username = jwtService.extractUsernameFromPreAuth(req.getPreAuthToken());
         if (!otpService.verifyOtp(username, req.getOtpCode(), "LOGIN_2FA")) {
-            throw new BadCredentialsException("Invalid OTP");
+            throw new BadCredentialsException("Neispravan OTP");
         }
         User user = userRepository.findByUsername(username).orElseThrow();
 

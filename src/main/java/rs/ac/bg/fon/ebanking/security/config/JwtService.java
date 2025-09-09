@@ -167,7 +167,7 @@ public class JwtService {
     public String extractUsernameFromPreAuth(String token) {
         Claims claims = extractAllClaims(token);
         if (!"LOGIN_2FA".equals(claims.get("purpose"))) {
-            throw new BadCredentialsException("Invalid preAuth token");
+            throw new BadCredentialsException("Nevažeći predAuth token.");
         }
         return claims.getSubject();
     }

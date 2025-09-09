@@ -13,10 +13,10 @@ import jakarta.validation.constraints.NotBlank;
 @NoArgsConstructor
 public class AuthenticationRequest {
 
-    @NotBlank(message = "Username is required!")
+    @NotBlank(message = "Korisničko ime je obavezno!")
     private String username;
 
-    @NotBlank(message = "Password is required!")
+    @NotBlank(message = "Lozinka je obavezna!")
     private String password;
 
     private boolean use2fa;

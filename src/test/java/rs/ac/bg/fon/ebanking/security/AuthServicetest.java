@@ -70,7 +70,7 @@ class AuthenticationServiceTest {
     }
 
     @Test
-    void authenticate_AsClient_success() {
+    void authenticate_AsClient_success() throws Exception {
         // Arrange
         String username = "pera";
         String rawPass = "pwd";
@@ -108,7 +108,7 @@ class AuthenticationServiceTest {
     }
 
     @Test
-    void authenticate_AsEmployee_success() {
+    void authenticate_AsEmployee_success() throws Exception {
         // Arrange
         String username = "employee_john"; // sadrzi "employee" -> employee path
         AuthenticationRequest request = new AuthenticationRequest();

@@ -14,9 +14,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import rs.ac.bg.fon.ebanking.audit.Audit;
 import rs.ac.bg.fon.ebanking.audit.AuditRepository;
 import rs.ac.bg.fon.ebanking.client.ClientRepository;
+import rs.ac.bg.fon.ebanking.employee.EmployeeImpl;
 import rs.ac.bg.fon.ebanking.employee.EmployeeRepository;
 import rs.ac.bg.fon.ebanking.user.UserRepository;
 import rs.ac.bg.fon.ebanking.employee.EmployeeDTO;
@@ -56,6 +58,7 @@ public class AuthenticationService {
     private final ModelMapper modelMapper;
     private final OtpService otpService;
     private final ClientImpl clientImpl;
+    private final EmployeeImpl employeeImpl;
     private final AuditRepository auditRepository;
 
 
@@ -80,21 +83,23 @@ public class AuthenticationService {
     @Value("${jwt.absolute-max-ms:28800000}")
     private long absoluteMaxMs;
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+    public AuthenticationResponse authenticate(AuthenticationRequest request) throws Exception {
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(),request.getPassword()));
 
         var user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(()->new BadCredentialsException("Data is not valid."));
+                .orElseThrow(()->new BadCredentialsException("Podaci nisu validni."));
 
-        if (user.getTwoFactorEnabled() && Boolean.TRUE.equals(request.isUse2fa())) {
+        if (Boolean.TRUE.equals(user.getTwoFactorEnabled()) && request.isUse2fa()) {
             String preAuthToken = jwtService.generatePreAuthToken(user);
 
-            otpService.generateAndSendOtp(user, request.getEmail(), "LOGIN_2FA");
+            String email = resolveEmailForUser(user);
+
+            otpService.generateAndSendOtp(user, email, "LOGIN_2FA");
 
             return AuthenticationResponse.builder()
                     .twoFactorRequired(true)
                     .preAuthToken(preAuthToken)
-                    .message("OTP sent to email")
+                    .message("OTP kod poslat na email.")
                     .build();
         }
 //        var jwtToken = jwtService.generateToken(user);
@@ -126,7 +131,7 @@ public class AuthenticationService {
                 .refreshToken(refreshToken)
                 .username(user.getUsername())
                 .role(idRoleName.role)
-                .message("Succesfull logging.")
+                .message("Uspešno prijavljivanje na sistem.")
                 .build();
     }
 
@@ -170,7 +175,7 @@ public class AuthenticationService {
                 .username(user.getUsername())
                 .twoFactorRequired(false)
                 .role(user.getRole().name())
-                .message("Successfully verified OTP")
+                .message("Uspešno potrvđen OTP kod.")
                 .build();
     }
 
@@ -204,7 +209,7 @@ public class AuthenticationService {
 
         String username = jwtService.extractUsername(rawRefresh);
         var user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("Korisnik nije pronađen."));
 
         String refreshHash = sha256(refreshPepper + rawRefresh);
         var storedOpt = tokenRepository.findByToken(refreshHash); // ista metoda, ali prosleđujemo HEŠ
@@ -303,7 +308,7 @@ public class AuthenticationService {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             return HexFormat.of().formatHex(md.digest(s.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
-            throw new IllegalStateException("SHA-256 not available", e);
+            throw new IllegalStateException("SHA-256 nije dostupan", e);
         }
     }
 
@@ -368,5 +373,23 @@ public class AuthenticationService {
                 .revoked(false)
                 .build();
         tokenRepository.save(token);
+    }
+
+    private String resolveEmailForUser(User user) throws Exception {
+        if (user.getRole() == Role.ROLE_CLIENT) {
+            var client = Optional.ofNullable(clientImpl.findByUsername(user.getUsername()))
+                    .orElseThrow(() -> new UsernameNotFoundException("Klijent nije pronađen."));
+
+            return Optional.ofNullable(client.getEmail())
+                    .filter(StringUtils::hasText)
+                    .orElseThrow(() -> new UsernameNotFoundException("Email nije postavljen."));
+        } else {
+            var employee = Optional.ofNullable(employeeImpl.findByUsername(user.getUsername()))
+                    .orElseThrow(() -> new UsernameNotFoundException("Zaposleni nije pronađen."));
+
+            return Optional.ofNullable(employee.getEmail())
+                    .filter(StringUtils::hasText)
+                    .orElseThrow(() -> new UsernameNotFoundException("Email nije postavljen."));
+        }
     }
 }
