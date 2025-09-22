@@ -1,5 +1,6 @@
 package rs.ac.bg.fon.ebanking.exception.handler;
 
+import org.slf4j.MDC;
 import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,13 +22,14 @@ import java.util.Map;
 @ControllerAdvice
 public class RestExceptionHandler {
 
+    String cid = MDC.get("cid");
 
     @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleException(ChangeSetPersister.NotFoundException ex){
         Map<String, String> errors = new HashMap<>();
         errors.put("error",ex.getMessage());
         ErrorResponse errorResponse =
-                new ErrorResponse(HttpStatus.NOT_FOUND.value(),errors,System.currentTimeMillis());
+                new ErrorResponse(HttpStatus.NOT_FOUND.value(),errors,System.currentTimeMillis(), cid);
         return new ResponseEntity<>(errorResponse,HttpStatus.NOT_FOUND);
     }
 
@@ -42,17 +44,18 @@ public class RestExceptionHandler {
         });
 
         ErrorResponse errorResponse =
-                new ErrorResponse(HttpStatus.NOT_ACCEPTABLE.value(),errors,System.currentTimeMillis());
+                new ErrorResponse(HttpStatus.NOT_ACCEPTABLE.value(),errors,System.currentTimeMillis(), cid);
         return new ResponseEntity<>(errorResponse,HttpStatus.NOT_FOUND);
     }
 
 
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleException(UsernameNotFoundException ex){
+
         Map<String, String> errors = new HashMap<>();
         errors.put("error",ex.getMessage());
         ErrorResponse errorResponse =
-                new ErrorResponse(HttpStatus.NOT_FOUND.value(),errors,System.currentTimeMillis());
+                new ErrorResponse(HttpStatus.NOT_FOUND.value(),errors,System.currentTimeMillis(), cid);
         return new ResponseEntity<>(errorResponse,HttpStatus.NOT_FOUND);
     }
 
@@ -62,7 +65,7 @@ public class RestExceptionHandler {
         Map<String, String> errors = new HashMap<>();
         errors.put("error",ex.getMessage());
         ErrorResponse errorResponse =
-                new ErrorResponse(HttpStatus.NOT_ACCEPTABLE.value(),errors,System.currentTimeMillis());
+                new ErrorResponse(HttpStatus.NOT_ACCEPTABLE.value(),errors,System.currentTimeMillis(), cid);
         return new ResponseEntity<>(errorResponse,HttpStatus.NOT_ACCEPTABLE);
     }
 
@@ -82,7 +85,7 @@ public class RestExceptionHandler {
         Map<String, String> errors = new HashMap<>();
         errors.put("error",ex.getMessage());
         ErrorResponse errorResponse =
-                new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(),errors,System.currentTimeMillis());
+                new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(),errors,System.currentTimeMillis(), cid);
 
         return new ResponseEntity<>(errorResponse,HttpStatus.INTERNAL_SERVER_ERROR);
     }

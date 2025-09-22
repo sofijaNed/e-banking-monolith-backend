@@ -2,6 +2,7 @@ package rs.ac.bg.fon.ebanking.audit;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -54,7 +55,10 @@ public class AuditPublisher {
             p.setUserAgent(req.getHeader("User-Agent"));
             p.setHttpMethod(req.getMethod());
             p.setHttpPath(req.getRequestURI());
-            p.setCorrelationId(first(req.getHeader("X-Request-ID"), null));
+            p.setCorrelationId(MDC.get("cid"));
+            if (p.getCorrelationId() == null || p.getCorrelationId().isBlank()) {
+                p.setCorrelationId(first(req.getHeader("X-Correlation-ID"), null));
+            }
         }
 
         publisher.publishEvent(p);

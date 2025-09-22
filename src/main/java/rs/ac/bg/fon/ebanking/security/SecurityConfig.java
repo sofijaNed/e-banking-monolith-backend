@@ -71,10 +71,10 @@ public class SecurityConfig {
                         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                         config.setAllowCredentials(true);
                         config.setAllowedHeaders(List.of(
-                                "Authorization","Content-Type","X-XSRF-TOKEN","X-CSRF-TOKEN","Idempotency-Key"
+                                "Authorization","Content-Type","X-XSRF-TOKEN","X-CSRF-TOKEN","Idempotency-Key", "X-Correlation-ID", "X-Correlation-Group"
                         ));
                         config.setExposedHeaders(List.of("Authorization",
-                                "RateLimit-Limit","RateLimit-Remaining","RateLimit-Reset","Retry-After"));
+                                "RateLimit-Limit","RateLimit-Remaining","RateLimit-Reset","Retry-After","X-Correlation-ID"));
                         config.setMaxAge(3600L);
                         return config;
                     }

@@ -15,7 +15,7 @@ public class AuditWriter {
     @Async("auditExecutor")
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void writeAsync(Audit a) {
-        if (a.getTs() == null) a.setTs(LocalDateTime.now());
+        if (a.getTs() == null) a.setTs(LocalDateTime.now(java.time.Clock.systemUTC()));
         repo.save(a);
     }
 }

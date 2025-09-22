@@ -9,6 +9,10 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.slf4j.MDC;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class EmailService {
@@ -26,13 +30,21 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
+    private String currentCid() {
+        return Optional.ofNullable(MDC.get("cid")).filter(s -> !s.isBlank())
+                .orElse(UUID.randomUUID().toString());
+    }
+
     public void sendOtp(@NonNull String to, @NonNull String otpCode) {
-        String subject = otpSubject;
+        String cid = currentCid();
+        long epochMs = Instant.now().toEpochMilli();
+
+        String subject = otpSubject + " [cid: " + cid + "]";
         String textBody = buildPlainOtpBody(otpCode);
         String htmlBody = buildHtmlOtpBody(otpCode);
 
         try {
-            sendHtmlEmail(to, subject, htmlBody);
+            sendHtmlEmailWithHeaders(to, subject, htmlBody, cid, epochMs);
         } catch (Exception ex) {
             sendPlainEmail(to, subject, textBody);
         }
@@ -47,6 +59,25 @@ public class EmailService {
             msg.setFrom(from);
         }
         mailSender.send(msg);
+    }
+
+    private void sendHtmlEmailWithHeaders(@NonNull String to,
+                                          @NonNull String subject,
+                                          @NonNull String html,
+                                          @NonNull String cid,
+                                          long epochMs) throws MessagingException {
+        MimeMessage mime = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(mime, "UTF-8");
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(html, true);
+        if (from != null && !from.isBlank()) {
+            helper.setFrom(from);
+        }
+        mime.addHeader("X-Correlation-ID", cid);
+        mime.addHeader("X-OTP-Sent-Epoch", String.valueOf(epochMs));
+
+        mailSender.send(mime);
     }
 
     public void sendOtpEmail(@NonNull String to, @NonNull String subject, @NonNull String text) {

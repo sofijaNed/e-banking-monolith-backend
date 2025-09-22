@@ -138,7 +138,7 @@ public class AuthenticationService {
                     "USER",
                     user.getUsername(),
                     200,
-                    null,
+                    dur,
                     "{\"sanitized\":true}",
                     "{\"method\":\"password-only\"}"
             );

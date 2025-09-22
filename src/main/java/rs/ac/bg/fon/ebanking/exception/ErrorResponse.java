@@ -16,4 +16,5 @@ public class ErrorResponse {
     private Map<String,String> message;
 
     private long timeStamp;
+    private String cid;
 }
