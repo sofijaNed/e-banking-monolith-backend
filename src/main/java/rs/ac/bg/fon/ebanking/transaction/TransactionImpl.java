@@ -106,18 +106,18 @@ public class TransactionImpl implements ServiceInterface<TransactionDTO> {
             transaction.setType(TransactionType.valueOf(dto.getType().toUpperCase()));
             Transaction saved = transactionRepository.save(transaction);
 
-            Audit audit = new Audit();
-            audit.setTableName("transaction");
-            audit.setRecordId(saved.getId());
-            audit.setAction("CREATE");
-            audit.setChangedAt(Instant.now());
-            if (sender.getClient() != null) {
-                audit.setChangedBy(sender.getClient().getFirstname());
-            } else {
-                audit.setChangedBy("BANK");
-            }
+//            Audit audit = new Audit();
+//            audit.setTableName("transaction");
+//            audit.setRecordId(saved.getId());
+//            audit.setAction("CREATE");
+//            audit.setChangedAt(Instant.now());
+//            if (sender.getClient() != null) {
+//                audit.setChangedBy(sender.getClient().getFirstname());
+//            } else {
+//                audit.setChangedBy("BANK");
+//            }
 
-            auditRepository.save(audit);
+//            auditRepository.save(audit);
             return mapToDTO(saved);
 
         } catch (Exception ex) {

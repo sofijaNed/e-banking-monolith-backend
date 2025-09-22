@@ -15,7 +15,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import rs.ac.bg.fon.ebanking.audit.Audit;
+import rs.ac.bg.fon.ebanking.audit.AuditPublisher;
 import rs.ac.bg.fon.ebanking.audit.AuditRepository;
 import rs.ac.bg.fon.ebanking.client.ClientRepository;
 import rs.ac.bg.fon.ebanking.employee.EmployeeImpl;
@@ -59,7 +59,7 @@ public class AuthenticationService {
     private final OtpService otpService;
     private final ClientImpl clientImpl;
     private final EmployeeImpl employeeImpl;
-    private final AuditRepository auditRepository;
+    private final AuditPublisher auditPublisher;
 
 
     @Value("${jwt.refresh-token-ms:604800000}")
@@ -84,55 +84,101 @@ public class AuthenticationService {
     private long absoluteMaxMs;
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) throws Exception {
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(),request.getPassword()));
+        long t0 = System.nanoTime();
+        try{
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(),request.getPassword()));
 
-        var user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(()->new BadCredentialsException("Podaci nisu validni."));
+            var user = userRepository.findByUsername(request.getUsername())
+                    .orElseThrow(()->new BadCredentialsException("Podaci nisu validni."));
 
-        if (Boolean.TRUE.equals(user.getTwoFactorEnabled()) && request.isUse2fa()) {
-            String preAuthToken = jwtService.generatePreAuthToken(user);
+            if (Boolean.TRUE.equals(user.getTwoFactorEnabled()) && request.isUse2fa()) {
+                String preAuthToken = jwtService.generatePreAuthToken(user);
 
-            String email = resolveEmailForUser(user);
+                String email = resolveEmailForUser(user);
 
-            otpService.generateAndSendOtp(user, email, "LOGIN_2FA");
+                otpService.generateAndSendOtp(user, email, "LOGIN_2FA");
 
-            return AuthenticationResponse.builder()
-                    .twoFactorRequired(true)
-                    .preAuthToken(preAuthToken)
-                    .message("OTP kod poslat na email.")
-                    .build();
-        }
+                int dur = (int)((System.nanoTime() - t0)/1_000_000);
+                auditPublisher.success(
+                        "LOGIN_2FA_SEND",
+                        user.getUsername(),
+                        "USER",
+                        user.getUsername(),
+                        200,
+                        dur,
+                        "{\"sanitized\":true,\"otp_in_payload\":false}",
+                        "{\"channel\":\"EMAIL\"}"
+                );
+
+                return AuthenticationResponse.builder()
+                        .twoFactorRequired(true)
+                        .preAuthToken(preAuthToken)
+                        .message("OTP kod poslat na email.")
+                        .build();
+            }
 //        var jwtToken = jwtService.generateToken(user);
 //        var refreshToken = jwtService.generateRefreshToken(user);
-        var now = new Date();
-        var accessToken  = jwtService.generateAccessToken(user);
-        var refreshToken = jwtService.generateRefreshToken(user, now);
+            var now = new Date();
+            var accessToken  = jwtService.generateAccessToken(user);
+            var refreshToken = jwtService.generateRefreshToken(user, now);
 
 //        revokeAllMemberTokens(user);
 //        saveMemberToken(user,jwtToken);
 
-        revokeAllRefreshTokens(user);
-        saveRefreshHash(user, refreshToken);
+            revokeAllRefreshTokens(user);
+            saveRefreshHash(user, refreshToken);
 
 
-        var idRoleName = resolveIdentityForAudit(user);
+            var idRoleName = resolveIdentityForAudit(user);
 
-        Audit audit = new Audit();
-        audit.setTableName("users");
-        audit.setRecordId(idRoleName.id);
-        audit.setAction("LOGIN");
-        audit.setChangedAt(Instant.now());
-        audit.setChangedBy(idRoleName.name);
+            int dur = (int)((System.nanoTime() - t0)/1_000_000);
+            auditPublisher.success(
+                    "LOGIN",
+                    user.getUsername(),
+                    "USER",
+                    user.getUsername(),
+                    200,
+                    null,
+                    "{\"sanitized\":true}",
+                    "{\"method\":\"password-only\"}"
+            );
+            return AuthenticationResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .username(user.getUsername())
+                    .role(idRoleName.role)
+                    .message("Uspešno prijavljivanje na sistem.")
+                    .build();
 
-        auditRepository.save(audit);
+            } catch (BadCredentialsException e) {
+                int dur = (int)((System.nanoTime() - t0)/1_000_000);
+                auditPublisher.fail(
+                        "LOGIN",
+                        request.getUsername(),
+                        "USER",
+                        request.getUsername(),
+                        401,
+                        dur,
+                        "{\"sanitized\":true}",
+                        "{\"reason\":\"bad_credentials\"}"
+                );
+                throw e;
+            } catch (Exception e) {
+                int dur = (int)((System.nanoTime() - t0)/1_000_000);
+                auditPublisher.fail(
+                        "LOGIN",
+                        request.getUsername(),
+                        "USER",
+                        request.getUsername(),
+                        500,
+                        dur,
+                        "{\"sanitized\":true}",
+                        "{\"reason\":\"unexpected\"}"
+                );
+                throw e;
+    }
 
-        return AuthenticationResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .username(user.getUsername())
-                .role(idRoleName.role)
-                .message("Uspešno prijavljivanje na sistem.")
-                .build();
+
     }
 
     public Object checkForActiveUser(String token) throws Exception {
@@ -150,6 +196,7 @@ public class AuthenticationService {
     public AuthenticationResponse completeAuthentication(User user) {
 //        var jwtToken = jwtService.generateToken(user);
 //        var refreshToken = jwtService.generateRefreshToken(user);
+        long t0 = System.nanoTime();
         var now = new Date();
         var accessToken  = jwtService.generateAccessToken(user);
         var refreshToken = jwtService.generateRefreshToken(user, now);
@@ -161,13 +208,17 @@ public class AuthenticationService {
 
         var idRoleName = resolveIdentityForAudit(user);
 
-        Audit audit = new Audit();
-        audit.setTableName("users");
-        audit.setRecordId(idRoleName.id);
-        audit.setAction("LOGIN");
-        audit.setChangedAt(Instant.now());
-        audit.setChangedBy(idRoleName.name);
-        auditRepository.save(audit);
+        int dur = (int)((System.nanoTime() - t0)/1_000_000);
+        auditPublisher.success(
+                "LOGIN_2FA_VERIFY",
+                user.getUsername(),
+                "USER",
+                user.getUsername(),
+                200,
+                dur,
+                "{\"sanitized\":true}",
+                "{\"result\":\"verified\"}"
+        );
 
         return AuthenticationResponse.builder()
                 .accessToken(accessToken)
@@ -182,9 +233,12 @@ public class AuthenticationService {
 
     public void refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("In refresh token method.");
-
+        long t0 = System.nanoTime();
         String rawRefresh = readLatestValidRefresh(request);
         if (rawRefresh == null) {
+            int dur = (int)((System.nanoTime() - t0)/1_000_000);
+            auditPublisher.fail("REFRESH_TOKEN", null, "USER", null, 401, dur,
+                    "{\"sanitized\":true}", "{\"reason\":\"missing_cookie\"}");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -193,10 +247,16 @@ public class AuthenticationService {
         try {
             typ = jwtService.extractTyp(rawRefresh);
         } catch (Exception e) {
+            int dur = (int)((System.nanoTime() - t0)/1_000_000);
+            auditPublisher.fail("REFRESH_TOKEN", null, "USER", null, 401, dur,
+                    "{\"sanitized\":true}", "{\"reason\":\"invalid_or_expired\"}");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
         if (!"refresh".equals(typ) || jwtService.isTokenExpired(rawRefresh)) {
+            int dur = (int)((System.nanoTime() - t0)/1_000_000);
+            auditPublisher.fail("REFRESH_TOKEN", null, "USER", null, 401, dur,
+                    "{\"sanitized\":true}", "{\"reason\":\"parse_error\"}");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -212,8 +272,11 @@ public class AuthenticationService {
                 .orElseThrow(() -> new UsernameNotFoundException("Korisnik nije pronađen."));
 
         String refreshHash = sha256(refreshPepper + rawRefresh);
-        var storedOpt = tokenRepository.findByToken(refreshHash); // ista metoda, ali prosleđujemo HEŠ
+        var storedOpt = tokenRepository.findByToken(refreshHash);
         if (storedOpt.isEmpty() || storedOpt.get().isRevoked() || storedOpt.get().isExpired()) {
+            int dur = (int)((System.nanoTime() - t0)/1_000_000);
+            auditPublisher.fail("REFRESH_TOKEN", username, "USER", username, 401, dur,
+                    "{\"sanitized\":true}", "{\"reason\":\"revoked_or_missing\"}");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -229,7 +292,17 @@ public class AuthenticationService {
 
 
         setRefreshCookie(response, newRefresh); // HttpOnly+Secure cookie
-
+        int dur = (int)((System.nanoTime() - t0)/1_000_000);
+        auditPublisher.success(
+                "REFRESH_TOKEN",
+                username,
+                "USER",
+                username,
+                200,
+                dur,
+                "{\"sanitized\":true}",
+                "{\"rotation\":\"true\"}"
+        );
         var authResponse = AuthenticationResponse.builder()
                 .accessToken(newAccess)
                 .message("refreshed")
